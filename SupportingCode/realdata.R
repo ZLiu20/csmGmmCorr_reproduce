@@ -320,3 +320,59 @@ run_mediation_cis <- function(variant, a_mu = 0.5, out_root = here::here("Fig4",
   writeLines("DONE", file.path(out, "DONE"))
   invisible(out)
 }
+
+# ---- Mediation with two mediators per variant: liver expression of two nearby genes, LDL --------
+# Feature = a common variant (one per 10-kb window); M1, M2 = liver expression of the two genes
+# with the nearest transcription start sites; outcome = LDL cholesterol; K = 4, coordinates
+# (alpha1, beta1, alpha2, beta2). Data/prepare_mediation_ldl.R. Data sets: "noshare" (primary;
+# the two gene models share no variant) and "nearest" (sensitivity).
+MEDLDL_JOBS <- rbind(expand.grid(set = "noshare", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
+                     expand.grid(set = "nearest", variant = "main", a_mu = c(0.5, 1.5), stringsAsFactors = FALSE))
+run_mediation_ldl <- function(set, variant, a_mu = 0.5, out_root = here::here("Fig4", "output", "mediation_ldl"),
+                              cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:3) {
+  suppressMessages({ library(data.table); library(csmGmmCorr) })
+  stopifnot(set %in% c("noshare", "nearest"), variant %in% c("main", "indep", "robust"))
+  cols <- c("alpha1", "beta1", "alpha2", "beta2")
+  d <- freadgz(here::here("Data", "mediation", sprintf("mediation_ldl_liver_%s.tsv.gz", set)))
+  d <- d[stats::complete.cases(d[, cols, with = FALSE])]
+  Z <- capz(as.matrix(d[, cols, with = FALSE]), cap); K <- ncol(Z)
+  vlab <- paste0(set, "_", rd_label(variant, a_mu))
+  out <- file.path(out_root, vlab); dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  say("mediation (liver, LDL), %s: %d variants, %d gene pairs, K = %d", vlab, nrow(Z), uniqueN(d[, .(gene1, gene2)]), K)
+  ref <- reference_cors(Z)
+  fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))
+  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = a_mu, b_mu = 15)
+  ctl <- csm_control(max_iter = 5000L, penalty = 30, weight_penalty = 10, fix_sigma = fs, cores = cores)
+  t0 <- proc.time()[3]
+  fit <- csm_fit(Z, spec, starts = c("null", "shared"), control = ctl)
+  fit_min <- (proc.time()[3] - t0) / 60
+  saveRDS(fit, file.path(out, "fit.rds"))
+  Sig <- fit$params$Sigma; ij <- which(upper.tri(Sig), arr.ind = TRUE)
+  fwrite(data.table(variant = vlab, stat1 = cols[ij[, 1]], stat2 = cols[ij[, 2]], fitted = Sig[ij], robust = ref$robust[ij],
+                    pearson = ref$pearson[ij]), file.path(out, "sigma.tsv"), sep = "\t")
+  fwrite(data.table(variant = vlab, stat = cols, iqr_sd = ref$iqr_sd), file.path(out, "iqr_sd.tsv"), sep = "\t")
+  sp <- fit$spec; mu <- fit$params$mu; colnames(mu) <- paste0("mu_", cols)
+  fwrite(data.table(support = apply(sp$grp_A * 1L, 1, paste, collapse = ""), size = sp$grp_size, component = sp$grp_m,
+                    weight = fit$params$varpi, mu), file.path(out, "support_weights.tsv"), sep = "\t")
+  rows <- list(); disc <- list()
+  for (t in ts) {
+    if (!fit$converged) break
+    lf <- csm_lfdr(fit, Z, "mediation", t, cores = cores)
+    su <- csm_stepup(lf, q); ad <- csm_adjust(Z, lf, "mediation", t, q)
+    ex <- if (su$n_rejected > 0) csm_extrapolation(fit, Z, "mediation", t, rejected = su$rejected, cutoff = su$cutoff)$flag else rep(NA, nrow(Z))
+    r <- su$rejected
+    rows[[length(rows) + 1L]] <- data.table(variant = vlab, a_mu = a_mu, t = t, n_features = nrow(Z), n_pairs = uniqueN(d[, .(gene1, gene2)]),
+      converged = fit$converged, loglik = fit$loglik, fit_minutes = round(fit_min, 2), null_weight = sum(fit$params$varpi[sp$grp_size == 0]),
+      R_raw = sum(r), R_adj = sum(ad$rejected), pairs_raw = uniqueN(d[r, .(gene1, gene2)]),
+      loci_raw = clump(as.character(d$chr), d$pos_b38, lf, r), loci_adj = clump(as.character(d$chr), d$pos_b38, lf, ad$rejected),
+      extrap_flags = sum(ex, na.rm = TRUE))
+    s <- r | ad$rejected
+    disc[[length(disc) + 1L]] <- data.table(t = t, d[s, .(variant, chr, pos_b38, gene1, gene1_name, gene2, gene2_name, shared)],
+                                            Z[s, , drop = FALSE], lfdr = lf[s], rej = r[s], rej_adj = ad$rejected[s], extrap = ex[s])
+  }
+  if (length(rows)) fwrite(rbindlist(rows), file.path(out, "summary.tsv"), sep = "\t")
+  if (length(disc)) fwrite(rbindlist(disc), file.path(out, "discoveries.tsv.gz"), sep = "\t")
+  print(rbindlist(rows))
+  writeLines("DONE", file.path(out, "DONE"))
+  invisible(out)
+}

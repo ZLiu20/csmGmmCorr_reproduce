@@ -70,3 +70,26 @@ Each folder in `Data/prepared/` contains:
 The replication files contain ten strata. The analysis uses EUR, EAS and AFR (female and
 male). The HIS and SAS strata are used only for the held-out validation
 (`Fig4/holdout_validation.R`).
+
+## Mediation application (two mediators, LDL cholesterol)
+
+```
+bash Data/download_mediation_ldl.sh            # about 5 GB, to Data/raw/mediation_ldl/
+Rscript tests/test_prepare_mediation_ldl.R     # seconds; synthetic check of the preparation
+bsub < Data/run_prepare_mediation_ldl.lsf      # set RAW_GLGC if the GLGC files are not in Data/raw/glgc
+bsub < Fig4/run_mediation_ldl.lsf              # 8 fits
+Rscript Fig4/summarize_mediation_ldl.R
+```
+
+Inputs: GTEx v8 liver cis-eQTL statistics of all tested variant-gene pairs, the GTEx v8 variant
+lookup table, the GTEx v8 MASHR liver expression model (Barbeira et al. 2021) and the GLGC 2021
+EUR LDL results (female and male, from `download_data.sh`). The design is described at the top of
+`Data/prepare_mediation_ldl.R`:
+
+- one feature per common variant, one variant per 10-kb window (chosen from positions only);
+- M1 and M2 are the liver expression of the two genes with the nearest transcription start sites
+  that have a liver model; in the primary data set the two models share no variant;
+- alpha = liver eQTL z of the variant for each gene; beta = S-PrediXcan z of each gene for LDL.
+
+Output: `Data/mediation/ldl_twas_liver.tsv.gz` and
+`Data/mediation/mediation_ldl_liver_{noshare,nearest}.tsv.gz`.
