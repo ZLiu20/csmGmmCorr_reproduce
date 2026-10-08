@@ -270,3 +270,53 @@ run_mediation <- function(snp, variant, tissues = names(MED_TISSUES)[1], a_mu = 
   writeLines("DONE", file.path(out, "DONE"))
   invisible(out)
 }
+
+# ---- Mediation with two mediators per feature (cis design; the model of main-text Section 2.1) ------
+# Feature = gene (its cis genetic variation is the exposure); M1 = expression in whole blood,
+# M2 = expression in liver; outcome = lung squamous cell carcinoma; K = 4, coordinates
+# (alpha_blood, beta_blood, alpha_liver, beta_liver). Data/prepare_mediation_cis.R.
+MEDCIS_JOBS <- expand.grid(variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE)
+run_mediation_cis <- function(variant, a_mu = 0.5, out_root = here::here("Fig4", "output", "mediation_cis"),
+                              cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:3) {
+  suppressMessages({ library(data.table); library(csmGmmCorr) })
+  stopifnot(variant %in% c("main", "indep", "robust"))
+  cols <- c("alpha_blood", "beta_blood", "alpha_liver", "beta_liver")
+  d <- freadgz(here::here("Data", "mediation", "mediation_cis_blood_liver.tsv.gz"))
+  d <- d[stats::complete.cases(d[, cols, with = FALSE])]
+  Z <- capz(as.matrix(d[, cols, with = FALSE]), cap); K <- ncol(Z)
+  vlab <- rd_label(variant, a_mu)
+  out <- file.path(out_root, vlab); dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  say("cis mediation (blood, liver), %s: %d genes, K = %d", vlab, nrow(Z), K)
+  ref <- reference_cors(Z)
+  fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))
+  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = a_mu, b_mu = 15)
+  ctl <- csm_control(max_iter = 5000L, penalty = 30, weight_penalty = 10, fix_sigma = fs, cores = cores)
+  t0 <- proc.time()[3]
+  fit <- csm_fit(Z, spec, starts = c("null", "shared"), control = ctl)
+  fit_min <- (proc.time()[3] - t0) / 60
+  saveRDS(fit, file.path(out, "fit.rds"))
+  Sig <- fit$params$Sigma; ij <- which(upper.tri(Sig), arr.ind = TRUE)
+  fwrite(data.table(variant = vlab, stat1 = cols[ij[, 1]], stat2 = cols[ij[, 2]], fitted = Sig[ij], robust = ref$robust[ij],
+                    pearson = ref$pearson[ij]), file.path(out, "sigma.tsv"), sep = "\t")
+  sp <- fit$spec; mu <- fit$params$mu; colnames(mu) <- paste0("mu_", cols)
+  fwrite(data.table(support = apply(sp$grp_A * 1L, 1, paste, collapse = ""), size = sp$grp_size, component = sp$grp_m,
+                    weight = fit$params$varpi, mu), file.path(out, "support_weights.tsv"), sep = "\t")
+  rows <- list(); disc <- list()
+  for (t in ts) {
+    if (!fit$converged) break
+    lf <- csm_lfdr(fit, Z, "mediation", t, cores = cores)
+    su <- csm_stepup(lf, q); ad <- csm_adjust(Z, lf, "mediation", t, q)
+    ex <- if (su$n_rejected > 0) csm_extrapolation(fit, Z, "mediation", t, rejected = su$rejected, cutoff = su$cutoff)$flag else rep(NA, nrow(Z))
+    rows[[length(rows) + 1L]] <- data.table(variant = vlab, a_mu = a_mu, t = t, n_genes = nrow(Z), converged = fit$converged,
+      loglik = fit$loglik, fit_minutes = round(fit_min, 2), null_weight = sum(fit$params$varpi[sp$grp_size == 0]),
+      R_raw = su$n_rejected, R_adj = sum(ad$rejected), extrap_flags = sum(ex, na.rm = TRUE))
+    disc[[length(disc) + 1L]] <- data.table(t = t, d[su$rejected | ad$rejected, .(gene_id, gene_name, chr, start_b38)],
+                                            Z[su$rejected | ad$rejected, , drop = FALSE], lfdr = lf[su$rejected | ad$rejected],
+                                            rej = su$rejected[su$rejected | ad$rejected], rej_adj = ad$rejected[su$rejected | ad$rejected])
+  }
+  fwrite(rbindlist(rows), file.path(out, "summary.tsv"), sep = "\t")
+  fwrite(rbindlist(disc), file.path(out, "discoveries.tsv"), sep = "\t")
+  print(rbindlist(rows))
+  writeLines("DONE", file.path(out, "DONE"))
+  invisible(out)
+}

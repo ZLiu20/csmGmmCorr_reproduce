@@ -1,0 +1,13 @@
+#BSUB -J medcis[1-6]
+#BSUB -W 4:00
+#BSUB -o Fig4/errDir/medcis_%I.out
+#BSUB -e Fig4/errDir/medcis_%I.err
+#BSUB -q medium
+#BSUB -n 4
+#BSUB -R "span[hosts=1] rusage[mem=8]"
+#BSUB -M 8
+
+# run 1-6
+module load R/4.5.1
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript Fig4/mediation_cis_fit.R $LSB_JOBINDEX
