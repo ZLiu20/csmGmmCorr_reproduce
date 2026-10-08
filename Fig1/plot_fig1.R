@@ -51,7 +51,7 @@ writeLines(out); writeLines(out, here::here("Fig1", "Fig1_numbers.txt"))
 
 c_cor <- grDevices::hcl(15, 100, 65); c_ind <- grDevices::hcl(195, 100, 65); c_diag <- grDevices::hcl(105, 100, 55)
 lv <- c("rho = 0.3", "Sigma = I", "rho = 0.3, along (s,s,s,s), s = z1/2")
-labs_ <- c(expression(rho == 0.3), expression(Sigma == I), expression(rho == 0.3 * ", along " * (s * "," * s * "," * s * "," * s) * ", " * s == z[1] / 2))
+labs_ <- c(expression(rho == 0.3), expression(Sigma == I), expression(paste(rho == 0.3, ", along (s, s, s, s), ", s == z[1] / 2)))
 mk <- function(df, ylab, title, shade = NULL) {
   df$setting <- factor(df$setting, levels = lv)
   p <- ggplot(df, aes(x, y, color = setting, linetype = setting))
