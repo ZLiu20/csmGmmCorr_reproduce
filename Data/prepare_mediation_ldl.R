@@ -1,17 +1,19 @@
-# Two-mediator mediation application (the model of main-text Section 2.1 and its figure):
-#   exposure = a genetic variant (SNP), M1 and M2 = the liver expression of two genes near it,
-#   outcome Y = LDL cholesterol. One feature per variant, K = 4, coordinates in mediation order
-#     alpha1 : SNP -> M1, GTEx v8 liver cis-eQTL z (slope / se, effect of the ALT allele)
-#     beta1  : M1 -> Y,   S-PrediXcan z of M1 (GTEx v8 MASHR liver model, GLGC EUR LDL)
-#     alpha2 : SNP -> M2, as alpha1 for the second gene (the same variant)
-#     beta2  : M2 -> Y,   as beta1
-#   The two genes are chosen from positions only: among the genes with a liver model that were
-#   tested with the variant, M1 has the nearest transcription start site and M2 is the next
-#   nearest (rule "nearest") or the next nearest whose model shares no variant with the model of
-#   M1 (rule "noshare", the primary data set: with a shared model variant the two S-PrediXcan
-#   statistics are partly the same statistic). The variants are chosen from positions only:
-#   common SNVs (GTEx MAF >= 0.05) with at least two such genes; in each 10-kb window the variant
-#   nearest to the middle of the window. No statistic is used to choose features.
+# Mediation application with G = 3 mediators (the model of main-text Section 2.1, K = 2G = 6):
+#   exposure = a genetic variant (SNP), M1, M2, M3 = the liver expression of three genes near it,
+#   outcome Y = LDL cholesterol. One feature per variant, coordinates in mediation order
+#   (alpha1, beta1, alpha2, beta2, alpha3, beta3):
+#     alpha_g : SNP -> M_g, GTEx v8 liver cis-eQTL z of the variant for gene g (slope / se, ALT allele)
+#     beta_g  : M_g -> Y,   S-PrediXcan z of gene g (GTEx v8 MASHR liver model, GLGC EUR LDL)
+#   With G = 3, t = 1 and t = 2 are both mediation targets (for t >= G the mediation and
+#   pleiotropy nulls coincide; main-text Section 2.1).
+#   The genes are chosen from positions only: among the genes with a liver model that were tested
+#   with the variant, ordered by the distance of their transcription start site to the variant,
+#   rule "nearest" takes the first three; rule "noshare" (the primary data set) takes the nearest
+#   gene and then, in order, each gene whose model shares no variant with the models already
+#   chosen (with a shared model variant two S-PrediXcan statistics are partly the same statistic).
+#   The variants are chosen from positions only: common SNVs (GTEx MAF >= 0.05) with at least three
+#   such genes; in each 10-kb window the variant nearest to the middle of the window. No statistic
+#   is used to choose features.
 #   LDL: GLGC 2021 EUR female and male results combined by inverse-variance weighting; variants
 #   are matched to GTEx on the build-37 position and both alleles (GTEx lookup table).
 #   S-PrediXcan: z_g = sum_l w_l s_l z_l / s_g, s_l^2 = Gamma_ll, s_g^2 = w' Gamma w over the model
@@ -137,47 +139,54 @@ if (!file.exists(file.path(sdir, "DONE"))) {
   writeLines("DONE", file.path(sdir, "DONE"))
 }
 
-# ---- 5. features: one variant per 10-kb window, two genes per variant ----------------------
+# ---- 5. features: one variant per 10-kb window, G = 3 genes per variant -------------------
+G <- 3L
 zt <- setNames(tw$z_twas, tw$gene_id); gn <- setNames(tw$gene_name, tw$gene_id)
+nshared <- function(a, b) length(intersect(modset[[a]], modset[[b]]))
+pick <- function(genes, rule) {               # genes ordered by distance of the TSS to the variant
+  if (rule == "nearest") return(genes[seq_len(G)])
+  sel <- genes[1L]
+  for (g in genes[-1L]) {
+    if (all(vapply(sel, function(s) nshared(s, g) == 0L, TRUE))) sel <- c(sel, g)
+    if (length(sel) == G) return(sel)
+  }
+  NULL
+}
 out <- list(noshare = list(), nearest = list())
 for (k in 1:22) {
   f <- file.path(sdir, sprintf("chr%d.tsv.gz", k)); if (!file.exists(f)) next
   d <- fread(cmd = zcat(f), header = FALSE, col.names = c("gene", "variant", "pos", "tss", "z"))
   d <- d[is.finite(z)]
   d[, ng := .N, by = variant]
-  v <- unique(d[ng >= 2L, .(variant, pos)])
+  v <- unique(d[ng >= G, .(variant, pos)])
   v[, win := pos %/% 10000L][, dm := abs(pos - (win * 10000L + 5000L))]
   setorder(v, win, dm, pos, variant); v <- v[!duplicated(win)]
   e <- d[variant %chin% v$variant][, ad := abs(tss)]
   setorder(e, variant, ad, gene)
-  rows <- e[, {
-    g1 <- gene[1L]
-    sh <- vapply(gene[-1L], function(g) length(intersect(modset[[g]], modset[[g1]])), 0L)
-    j0 <- 2L; j1 <- which(sh == 0L)[1L] + 1L
-    list(pos = pos[1L], gene1 = g1, tss1 = tss[1L], alpha1 = z[1L],
-         gene2_nearest = gene[j0], tss2_nearest = tss[j0], alpha2_nearest = z[j0], shared_nearest = sh[1L],
-         gene2_noshare = if (is.na(j1)) NA_character_ else gene[j1], tss2_noshare = if (is.na(j1)) NA_integer_ else tss[j1],
-         alpha2_noshare = if (is.na(j1)) NA_real_ else z[j1])
-  }, by = variant]
-  rows[, chr := k]
-  for (r in c("nearest", "noshare")) {
-    x <- rows[!is.na(get(paste0("gene2_", r))), .(variant, chr, pos_b38 = pos, gene1, gene1_name = gn[gene1], tss1,
-              gene2 = get(paste0("gene2_", r)), tss2 = get(paste0("tss2_", r)),
-              alpha1, beta1 = zt[gene1], alpha2 = get(paste0("alpha2_", r)), beta2 = zt[get(paste0("gene2_", r))],
-              shared = if (r == "nearest") shared_nearest else 0L)]
-    x[, gene2_name := gn[gene2]]
-    out[[r]][[k]] <- x
+  e <- split(e, by = "variant")
+  for (r in names(out)) {
+    out[[r]][[k]] <- rbindlist(lapply(e, function(x) {
+      g <- pick(x$gene, r); if (is.null(g)) return(NULL)
+      m <- match(g, x$gene)
+      sh <- sum(combn(g, 2L, function(p) nshared(p[1L], p[2L])))
+      row <- list(variant = x$variant[1L], chr = k, pos_b38 = x$pos[1L], shared = sh)
+      for (j in seq_len(G)) {
+        row[[paste0("gene", j)]] <- g[j]; row[[paste0("gene", j, "_name")]] <- gn[[g[j]]]; row[[paste0("tss", j)]] <- x$tss[m[j]]
+        row[[paste0("alpha", j)]] <- x$z[m[j]]; row[[paste0("beta", j)]] <- zt[[g[j]]]
+      }
+      row
+    }))
   }
   say("chr%d: %d variant-gene pairs, %d windows", k, nrow(d), nrow(v))
 }
+zc <- as.vector(rbind(paste0("alpha", seq_len(G)), paste0("beta", seq_len(G))))
 for (r in names(out)) {
   D <- rbindlist(out[[r]]); setorder(D, chr, pos_b38)
-  setcolorder(D, c("variant", "chr", "pos_b38", "gene1", "gene1_name", "tss1", "gene2", "gene2_name", "tss2",
-                   "alpha1", "beta1", "alpha2", "beta2", "shared"))
+  setcolorder(D, c("variant", "chr", "pos_b38", as.vector(rbind(paste0("gene", 1:G), paste0("gene", 1:G, "_name"), paste0("tss", 1:G))), zc, "shared"))
   fwrite(D, file.path(odir, sprintf("mediation_ldl_liver_%s.tsv.gz", r)), sep = "\t")
-  Z <- as.matrix(D[, .(alpha1, beta1, alpha2, beta2)])
-  say("rule %s: %d features, %d distinct gene pairs, %d with shared model variants", r, nrow(D),
-      uniqueN(D[, .(gene1, gene2)]), sum(D$shared > 0))
+  Z <- as.matrix(D[, zc, with = FALSE])
+  say("rule %s: %d features, %d distinct gene triples, %d with shared model variants", r, nrow(D),
+      uniqueN(D[, paste0("gene", 1:G), with = FALSE]), sum(D$shared > 0))
   print(round(cor(Z), 3))
   print(round(apply(Z, 2, function(v) diff(quantile(v, c(.25, .75))) / 1.349), 2))
   print(round(colMeans(abs(Z) > 4), 4))

@@ -71,7 +71,7 @@ The replication files contain ten strata. The analysis uses EUR, EAS and AFR (fe
 male). The HIS and SAS strata are used only for the held-out validation
 (`Fig4/holdout_validation.R`).
 
-## Mediation application (two mediators, LDL cholesterol)
+## Mediation application (three mediators, LDL cholesterol)
 
 ```
 bash Data/download_mediation_ldl.sh            # about 5 GB, to Data/raw/mediation_ldl/
@@ -87,8 +87,8 @@ EUR LDL results (female and male, from `download_data.sh`). The design is descri
 `Data/prepare_mediation_ldl.R`:
 
 - one feature per common variant, one variant per 10-kb window (chosen from positions only);
-- M1 and M2 are the liver expression of the two genes with the nearest transcription start sites
-  that have a liver model; in the primary data set the two models share no variant;
+- M1, M2 and M3 are the liver expression of the three genes with the nearest transcription start
+  sites that have a liver model (K = 6); in the primary data set the models share no variant;
 - alpha = liver eQTL z of the variant for each gene; beta = S-PrediXcan z of each gene for LDL.
 
 Output: `Data/mediation/ldl_twas_liver.tsv.gz` and

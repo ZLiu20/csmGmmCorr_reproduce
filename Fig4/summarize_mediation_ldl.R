@@ -1,4 +1,4 @@
-# Summary of the two-mediator LDL mediation application.  Rscript Fig4/summarize_mediation_ldl.R
+# Summary of the three-mediator (K = 6) LDL mediation application.  Rscript Fig4/summarize_mediation_ldl.R
 here::i_am("Fig4/summarize_mediation_ldl.R")
 source(here::here("SupportingCode", "load_all.R"))
 suppressMessages(library(data.table))
@@ -18,10 +18,11 @@ for (v in list.dirs(od, recursive = FALSE, full.names = FALSE)) {
     x <- d[t == t0 & rej == TRUE]
     if (!nrow(x)) next
     lead <- x[clump_leads(as.character(x$chr), x$pos_b38, x$lfdr, rep(TRUE, nrow(x)))]
-    cat(sprintf("t = %d: %d variants, %d gene pairs, %d loci; loci (lead variant, first 40):\n", t0, nrow(x), uniqueN(x[, .(gene1, gene2)]), nrow(lead)))
-    print(head(lead[order(lfdr), .(chr, pos_b38, gene1_name, gene2_name, alpha1 = round(alpha1, 1), beta1 = round(beta1, 1),
-                                   alpha2 = round(alpha2, 1), beta2 = round(beta2, 1), lfdr = signif(lfdr, 2))], 40))
-    k <- x[gene1_name %in% KNOWN | gene2_name %in% KNOWN, unique(c(gene1_name[gene1_name %in% KNOWN], gene2_name[gene2_name %in% KNOWN]))]
+    cat(sprintf("t = %d: %d variants, %d gene triples, %d loci; loci (lead variant, first 40):\n", t0, nrow(x), uniqueN(x[, .(gene1, gene2, gene3)]), nrow(lead)))
+    print(head(lead[order(lfdr), .(chr, pos_b38, gene1_name, gene2_name, gene3_name, a1 = round(alpha1, 1), b1 = round(beta1, 1),
+                                   a2 = round(alpha2, 1), b2 = round(beta2, 1), a3 = round(alpha3, 1), b3 = round(beta3, 1),
+                                   lfdr = signif(lfdr, 2))], 40))
+    k <- intersect(KNOWN, unlist(x[, .(gene1_name, gene2_name, gene3_name)]))
     cat("known LDL genes among the mediators:", paste(sort(k), collapse = ", "), "\n")
   }
 }

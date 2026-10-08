@@ -321,24 +321,27 @@ run_mediation_cis <- function(variant, a_mu = 0.5, out_root = here::here("Fig4",
   invisible(out)
 }
 
-# ---- Mediation with two mediators per variant: liver expression of two nearby genes, LDL --------
-# Feature = a common variant (one per 10-kb window); M1, M2 = liver expression of the two genes
-# with the nearest transcription start sites; outcome = LDL cholesterol; K = 4, coordinates
-# (alpha1, beta1, alpha2, beta2). Data/prepare_mediation_ldl.R. Data sets: "noshare" (primary;
-# the two gene models share no variant) and "nearest" (sensitivity).
+# ---- Mediation with three mediators per variant: liver expression of three nearby genes, LDL ------
+# Feature = a common variant (one per 10-kb window); M1, M2, M3 = liver expression of the three
+# genes with the nearest transcription start sites; outcome = LDL cholesterol; G = 3, K = 6,
+# coordinates (alpha1, beta1, alpha2, beta2, alpha3, beta3); t = 1, 2 (for t >= G the mediation
+# null equals the pleiotropy null). Data/prepare_mediation_ldl.R. Data sets: "noshare" (primary;
+# the gene models share no variant) and "nearest" (sensitivity).
+MEDLDL_COLS <- c("alpha1", "beta1", "alpha2", "beta2", "alpha3", "beta3")
 MEDLDL_JOBS <- rbind(expand.grid(set = "noshare", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
                      expand.grid(set = "nearest", variant = "main", a_mu = c(0.5, 1.5), stringsAsFactors = FALSE))
 run_mediation_ldl <- function(set, variant, a_mu = 0.5, out_root = here::here("Fig4", "output", "mediation_ldl"),
-                              cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:3) {
+                              cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:2) {
   suppressMessages({ library(data.table); library(csmGmmCorr) })
   stopifnot(set %in% c("noshare", "nearest"), variant %in% c("main", "indep", "robust"))
-  cols <- c("alpha1", "beta1", "alpha2", "beta2")
+  cols <- MEDLDL_COLS; gcols <- c("gene1", "gene2", "gene3")
   d <- freadgz(here::here("Data", "mediation", sprintf("mediation_ldl_liver_%s.tsv.gz", set)))
   d <- d[stats::complete.cases(d[, cols, with = FALSE])]
   Z <- capz(as.matrix(d[, cols, with = FALSE]), cap); K <- ncol(Z)
+  ntrip <- function(sel) uniqueN(d[sel, gcols, with = FALSE])
   vlab <- paste0(set, "_", rd_label(variant, a_mu))
   out <- file.path(out_root, vlab); dir.create(out, recursive = TRUE, showWarnings = FALSE)
-  say("mediation (liver, LDL), %s: %d variants, %d gene pairs, K = %d", vlab, nrow(Z), uniqueN(d[, .(gene1, gene2)]), K)
+  say("mediation (liver, LDL), %s: %d variants, %d gene triples, K = %d", vlab, nrow(Z), ntrip(TRUE), K)
   ref <- reference_cors(Z)
   fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))
   spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = a_mu, b_mu = 15)
@@ -361,13 +364,13 @@ run_mediation_ldl <- function(set, variant, a_mu = 0.5, out_root = here::here("F
     su <- csm_stepup(lf, q); ad <- csm_adjust(Z, lf, "mediation", t, q)
     ex <- if (su$n_rejected > 0) csm_extrapolation(fit, Z, "mediation", t, rejected = su$rejected, cutoff = su$cutoff)$flag else rep(NA, nrow(Z))
     r <- su$rejected
-    rows[[length(rows) + 1L]] <- data.table(variant = vlab, a_mu = a_mu, t = t, n_features = nrow(Z), n_pairs = uniqueN(d[, .(gene1, gene2)]),
+    rows[[length(rows) + 1L]] <- data.table(variant = vlab, a_mu = a_mu, t = t, n_features = nrow(Z), n_triples = ntrip(TRUE),
       converged = fit$converged, loglik = fit$loglik, fit_minutes = round(fit_min, 2), null_weight = sum(fit$params$varpi[sp$grp_size == 0]),
-      R_raw = sum(r), R_adj = sum(ad$rejected), pairs_raw = uniqueN(d[r, .(gene1, gene2)]),
+      R_raw = sum(r), R_adj = sum(ad$rejected), triples_raw = ntrip(r),
       loci_raw = clump(as.character(d$chr), d$pos_b38, lf, r), loci_adj = clump(as.character(d$chr), d$pos_b38, lf, ad$rejected),
       extrap_flags = sum(ex, na.rm = TRUE))
     s <- r | ad$rejected
-    disc[[length(disc) + 1L]] <- data.table(t = t, d[s, .(variant, chr, pos_b38, gene1, gene1_name, gene2, gene2_name, shared)],
+    disc[[length(disc) + 1L]] <- data.table(t = t, d[s, .(variant, chr, pos_b38, gene1, gene1_name, gene2, gene2_name, gene3, gene3_name, shared)],
                                             Z[s, , drop = FALSE], lfdr = lf[s], rej = r[s], rej_adj = ad$rejected[s], extrap = ex[s])
   }
   if (length(rows)) fwrite(rbindlist(rows), file.path(out, "summary.tsv"), sep = "\t")
