@@ -1,5 +1,5 @@
 #BSUB -J mediation[1-135]
-#BSUB -W 2:00
+#BSUB -W 4:00
 #BSUB -o Fig4/errDir/mediation_%I.out
 #BSUB -e Fig4/errDir/mediation_%I.err
 #BSUB -q medium
