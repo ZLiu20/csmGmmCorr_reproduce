@@ -38,18 +38,27 @@ fe <- mk(c(1:4, 6:7), c(0.02, 0.03, -0.01, 0.05, 0.04, -0.02), c(0.01, 0.01, 0.0
 ma <- mk(1:7, c(0.04, 0.01, 0.00, 0.03, -0.06, 0.02, -0.03), c(0.02, 0.01, 0.01, 0.01, 0.02, 0.01, 0.01)); ma[2, c("REF", "ALT") := .("T", "C")]
 wgz(fe, file.path(gl, "LDL_INV_EUR_HRC_1KGP3_others_FEMALE.meta.singlevar.results.gz"))
 wgz(ma, file.path(gl, "LDL_INV_EUR_HRC_1KGP3_others_MALE.meta.singlevar.results.gz"))
-# eQTL all-pairs: chr1 variants every 500 bp from 500 to 29,500 with genes G1 (TSS 5,000), G2 (8,000),
-# G6 (12,000), G3 (25,000) and G9 without a model (6,000); chr2 variants from 500 to 9,500 with G4
-# (1,000), G5 (4,000) and G7 (9,000)
+# eQTL statistics (eQTL Catalogue format): chr1 variants every 500 bp from 500 to 29,500 with genes
+# G1 (TSS 5,000), G2 (TSS 8,000, minus strand), G6 (12,000), G3 (25,000) and G9 without a model
+# (6,000); chr2 variants from 500 to 9,500 with G4 (1,000), G5 (4,000) and G7 (9,000); one indel
 set.seed(1)
 ap <- rbindlist(list(
-  CJ(gene_id = c("ENSG01.1", "ENSG02.1", "ENSG03.1", "ENSG06.1", "ENSG09.1"), pos = seq(500, 29500, 500))[, chr := "chr1"],
-  CJ(gene_id = c("ENSG04.1", "ENSG05.1", "ENSG07.1"), pos = seq(500, 9500, 500))[, chr := "chr2"]))
-tss <- c(ENSG01.1 = 5000, ENSG02.1 = 8000, ENSG03.1 = 25000, ENSG06.1 = 12000, ENSG09.1 = 6000,
-         ENSG04.1 = 1000, ENSG05.1 = 4000, ENSG07.1 = 9000)
-ap[, `:=`(variant_id = sprintf("%s_%d_A_G_b38", chr, pos), tss_distance = pos - tss[gene_id], ma_samples = 10, ma_count = 10,
-          maf = ifelse(pos == 15000, 0.01, 0.2), pval_nominal = 0.5, slope = round(rnorm(.N), 3), slope_se = 0.5)]
-wgz(ap[, .(gene_id, variant_id, tss_distance, ma_samples, ma_count, maf, pval_nominal, slope, slope_se)], file.path(src, "Liver.allpairs.txt.gz"))
+  CJ(gene_id = c("ENSG01", "ENSG02", "ENSG03", "ENSG06", "ENSG09"), position = seq(500, 29500, 500))[, chromosome := "1"],
+  CJ(gene_id = c("ENSG04", "ENSG05", "ENSG07"), position = seq(500, 9500, 500))[, chromosome := "2"]))
+ap[, `:=`(molecular_trait_id = gene_id, ref = "A", alt = "G", variant = sprintf("chr%s_%d_A_G", chromosome, position),
+          ma_samples = 10, maf = ifelse(position == 15000, 0.01, 0.2), pvalue = 0.5, beta = round(rnorm(.N), 3), se = 0.5,
+          type = "SNP", ac = 10, an = 500, r2 = NA, molecular_trait_object_id = gene_id, median_tpm = 1, rsid = "rs0")]
+ap <- rbind(ap, ap[1][, `:=`(position = 4990L, ref = "AT", variant = "chr1_4990_AT_G", type = "INDEL")])
+wgz(ap[, .(molecular_trait_id, chromosome, position, ref, alt, variant, ma_samples, maf, pvalue, beta, se, type, ac, an, r2,
+           molecular_trait_object_id, gene_id, median_tpm, rsid)], file.path(src, "QTD000266.all.tsv.gz"))
+gt <- data.table(chr = c("chr1", "chr1", "chr1", "chr1", "chr1", "chr2", "chr2", "chr2"),
+                 gene = c("ENSG01.1", "ENSG02.1", "ENSG03.1", "ENSG06.1", "ENSG09.1", "ENSG04.1", "ENSG05.1", "ENSG07.1"),
+                 start = c(5000, 6500, 25000, 12000, 6000, 1000, 4000, 9000), end = c(9000, 8000, 30000, 15000, 7000, 2000, 6000, 9900),
+                 strand = c("+", "-", "+", "+", "+", "+", "+", "+"))
+writeLines(c("##description: test", sprintf('%s\tHAVANA\tgene\t%d\t%d\t.\t%s\t.\tgene_id "%s"; gene_type "protein_coding"; gene_name "X";',
+                                           gt$chr, as.integer(gt$start), as.integer(gt$end), gt$strand, gt$gene),
+             'chr1\tHAVANA\ttranscript\t1\t2\t.\t+\t.\tgene_id "ENSG01.1"; transcript_id "T1";'),
+           file.path(src, "gencode.v26.GRCh38.genes.gtf"))
 
 st <- system2("Rscript", c(here::here("Data", "prepare_mediation_ldl.R"), shQuote(src), shQuote(gl)), env = paste0("MEDLDL_OUT=", out))
 if (st != 0) stop("prepare_mediation_ldl.R failed")
@@ -77,7 +86,7 @@ ok(identical(trip(ns, 1, 14500), c(gene1 = "ENSG06", gene2 = "ENSG02", gene3 = "
 ok(identical(trip(ne, 1, 25000), c(gene1 = "ENSG03", gene2 = "ENSG06", gene3 = "ENSG02")), "nearest at 25,000: G3, G6, G2")
 ok(identical(trip(ne, 2, 5000), c(gene1 = "ENSG05", gene2 = "ENSG04", gene3 = "ENSG07")), "chr2: G5, then G4 and G7 (tie broken by gene ID)")
 r1 <- ne[chr == 1 & pos_b38 == 5000]
-a1 <- ap[gene_id == "ENSG06.1" & chr == "chr1" & pos == 5000, slope / slope_se]
+a1 <- ap[gene_id == "ENSG06" & chromosome == "1" & position == 5000, beta / se]
 ok(isTRUE(all.equal(r1$alpha3, a1, tolerance = 1e-5)) && isTRUE(all.equal(c(r1$beta1, r1$beta2, r1$beta3), exp_tw[c(1, 2, 6)], tolerance = 1e-6)),
    "alpha3 and beta1-3 of the first feature")
 cat(if (nfail == 0) "ALL TESTS PASSED\n" else sprintf("%d TESTS FAILED\n", nfail))

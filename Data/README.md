@@ -74,15 +74,15 @@ male). The HIS and SAS strata are used only for the held-out validation
 ## Mediation application (three mediators, LDL cholesterol)
 
 ```
-bash Data/download_mediation_ldl.sh            # about 5 GB, to Data/raw/mediation_ldl/
+bash Data/download_mediation_ldl.sh            # about 4 GB, to Data/raw/mediation_ldl/
 Rscript tests/test_prepare_mediation_ldl.R     # seconds; synthetic check of the preparation
 bsub < Data/run_prepare_mediation_ldl.lsf      # set RAW_GLGC if the GLGC files are not in Data/raw/glgc
 bsub < Fig4/run_mediation_ldl.lsf              # 8 fits
 Rscript Fig4/summarize_mediation_ldl.R
 ```
 
-Inputs: GTEx v8 liver cis-eQTL statistics of all tested variant-gene pairs, the GTEx v8 variant
-lookup table, the GTEx v8 MASHR liver expression model (Barbeira et al. 2021) and the GLGC 2021
+Inputs: liver cis-eQTL statistics of all tested variant-gene pairs (GTEx v10, eQTL Catalogue dataset
+QTD000266), the GENCODE v26 gene annotation of GTEx, the GTEx v8 variant lookup table, the GTEx v8 MASHR liver expression model (Barbeira et al. 2021) and the GLGC 2021
 EUR LDL results (female and male, from `download_data.sh`). The design is described at the top of
 `Data/prepare_mediation_ldl.R`:
 

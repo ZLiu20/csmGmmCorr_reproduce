@@ -1,6 +1,7 @@
 #!/bin/bash
-# Downloads for the two-mediator LDL application (Data/prepare_mediation_ldl.R), about 5 GB:
-#   GTEx v8 liver cis-eQTL statistics of all tested variant-gene pairs (Liver.allpairs.txt.gz)
+# Downloads for the three-mediator LDL application (Data/prepare_mediation_ldl.R), about 4 GB:
+#   GTEx v10 liver cis-eQTL statistics of all tested variant-gene pairs, eQTL Catalogue dataset
+#     QTD000266 (QTD000266.all.tsv.gz, 2.9 GB), and the GENCODE v26 gene annotation of GTEx (TSS)
 #   GTEx v8 variant lookup table (build-38 variant IDs with their build-37 positions)
 #   GTEx v8 MASHR expression-prediction models (Barbeira et al. 2021; liver model and covariances)
 # The LDL-cholesterol statistics are the GLGC EUR female and male files of download_data.sh.
@@ -10,9 +11,10 @@ set -e
 cd "$(dirname "$0")"
 D=raw/mediation_ldl
 mkdir -p $D
-get() { [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -q -O "$2.part" "$1" && mv "$2.part" "$2"; }
+get() { [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -nv -O "$2.part" "$1" && mv "$2.part" "$2"; }
 G=https://storage.googleapis.com/adult-gtex
-get $G/bulk-qtl/v8/single-tissue-cis-qtl/GTEx_Analysis_v8_eQTL_all_associations/Liver.allpairs.txt.gz $D/Liver.allpairs.txt.gz
+get https://ftp.ebi.ac.uk/pub/databases/spot/eQTL/sumstats/QTS000015/QTD000266/QTD000266.all.tsv.gz $D/QTD000266.all.tsv.gz
+get $G/references/v8/reference-tables/gencode.v26.GRCh38.genes.gtf $D/gencode.v26.GRCh38.genes.gtf
 get $G/references/v8/reference-tables/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.lookup_table.txt.gz \
     $D/GTEx_v8_lookup_table.txt.gz
 get "https://zenodo.org/records/3518299/files/mashr_eqtl.tar?download=1" $D/mashr_eqtl.tar

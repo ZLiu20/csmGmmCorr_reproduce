@@ -2,7 +2,8 @@
 #   exposure = a genetic variant (SNP), M1, M2, M3 = the liver expression of three genes near it,
 #   outcome Y = LDL cholesterol. One feature per variant, coordinates in mediation order
 #   (alpha1, beta1, alpha2, beta2, alpha3, beta3):
-#     alpha_g : SNP -> M_g, GTEx v8 liver cis-eQTL z of the variant for gene g (slope / se, ALT allele)
+#     alpha_g : SNP -> M_g, liver cis-eQTL z of the variant for gene g (beta / se, ALT allele): GTEx v10
+#               liver, all tested variant-gene pairs as reprocessed by the eQTL Catalogue (QTD000266, n = 261)
 #     beta_g  : M_g -> Y,   S-PrediXcan z of gene g (GTEx v8 MASHR liver model, GLGC EUR LDL)
 #   With G = 3, t = 1 and t = 2 are both mediation targets (for t >= G the mediation and
 #   pleiotropy nulls coincide; main-text Section 2.1).
@@ -32,9 +33,10 @@ groot <- if (length(a) >= 2) a[2] else here::here("Data", "raw", "glgc")
 root <- Sys.getenv("MEDLDL_OUT", here::here("Data"))    # tests/test_prepare_mediation_ldl.R writes elsewhere
 tmp <- file.path(root, "prepared", "mediation_ldl"); dir.create(tmp, recursive = TRUE, showWarnings = FALSE)
 odir <- file.path(root, "mediation"); dir.create(odir, recursive = TRUE, showWarnings = FALSE)
-f_pairs <- file.path(src, "Liver.allpairs.txt.gz"); f_look <- file.path(src, "GTEx_v8_lookup_table.txt.gz")
+f_pairs <- file.path(src, "QTD000266.all.tsv.gz"); f_gtf <- file.path(src, "gencode.v26.GRCh38.genes.gtf")
+f_look <- file.path(src, "GTEx_v8_lookup_table.txt.gz")
 f_db <- file.path(src, "mashr_Liver.db"); f_cov <- file.path(src, "mashr_Liver.txt.gz")
-for (f in c(f_pairs, f_look, f_db, f_cov)) if (!file.exists(f)) stop("missing input: ", f)
+for (f in c(f_pairs, f_gtf, f_look, f_db, f_cov)) if (!file.exists(f)) stop("missing input: ", f)
 find1 <- function(pat) { x <- list.files(groot, pattern = pat, recursive = TRUE, full.names = TRUE); if (!length(x)) stop("not found under ", groot, ": ", pat); x[1] }
 f_ldl <- c(female = find1("^LDL_INV_EUR_HRC_1KGP3_others_FEMALE\\.meta\\.singlevar\\.results\\.gz$"),
            male   = find1("^LDL_INV_EUR_HRC_1KGP3_others_MALE\\.meta\\.singlevar\\.results\\.gz$"))
@@ -119,21 +121,29 @@ tw <- fread(f_tw)
 modset <- split(W[, .(g = strip(gene), var)], by = "g", keep.by = FALSE)
 modset <- lapply(modset, `[[`, "var")
 
-# ---- 4. liver eQTL statistics: one pass over the all-pairs file, split by chromosome --------
+# ---- 4. liver eQTL statistics: one pass over the eQTL Catalogue file, split by chromosome ---
+# TSS of each gene from the GENCODE v26 annotation of GTEx (start for + strand, end for - strand).
 sdir <- file.path(tmp, "liver_pairs")
 if (!file.exists(file.path(sdir, "DONE"))) {
   dir.create(sdir, showWarnings = FALSE)
+  gtf <- fread(cmd = paste(if (grepl("\\.gz$", f_gtf)) zcat(f_gtf) else paste("cat", shQuote(f_gtf)), "| grep -v '^#'"),
+               sep = "\t", header = FALSE, select = c(1, 3, 4, 5, 7, 9), col.names = c("chr", "feature", "start", "end", "strand", "attr"))
+  gtf <- gtf[feature == "gene"]
+  gtf[, gene_id := strip(sub('^.*gene_id "([^"]+)".*$', "\\1", attr))]
+  gtf[, tss := fifelse(strand == "-", end, start)]
+  gtf <- gtf[gene_id %chin% tw$gene_id & !(gene_id %chin% gene_id[duplicated(gene_id)])]
+  say("model genes with a TSS: %d of %d", nrow(gtf), nrow(tw))
+  gfile <- file.path(tmp, "model_genes_tss.txt"); fwrite(gtf[, .(gene_id, tss)], gfile, sep = "\t", col.names = FALSE)
   hdr <- names(fread(cmd = paste(zcat(f_pairs), "| head -2")))
-  need <- c("gene_id", "variant_id", "tss_distance", "maf", "slope", "slope_se")
-  if (!all(need %in% hdr)) stop("unexpected all-pairs columns: ", paste(hdr, collapse = ","))
-  ix <- match(need, hdr)
-  gfile <- file.path(tmp, "model_genes.txt"); writeLines(tw$gene_id, gfile)
-  awk <- sprintf(paste0("awk -F'\\t' -v OFS='\\t' -v G=%s -v D=%s -v cg=%d -v cv=%d -v ct=%d -v cm=%d -v cs=%d -v ce=%d '",
-    "BEGIN{while((getline l < G)>0) K[l]=1} NR==1{next} ($cm+0)<0.05{next} ($ce+0)<=0{next} ",
-    "{g=$cg; sub(/\\..*$/,\"\",g); if(!(g in K)) next; n=split($cv,a,\"_\"); if(n<5||length(a[3])!=1||length(a[4])!=1) next; ",
-    "c=a[1]; sub(/^chr/,\"\",c); if(c !~ /^[0-9]+$/) next; f=D \"/chr\" c \".tsv.gz\"; ",
-    "p=\"gzip > \" f; P[p]=1; print g,$cv,a[2],$ct,$cs/$ce | p} END{for(p in P) close(p)}'"), shQuote(gfile), shQuote(sdir), ix[1], ix[2], ix[3], ix[4], ix[5], ix[6])
-  say("splitting the all-pairs file (one pass)")
+  need <- c("gene_id", "chromosome", "position", "ref", "alt", "variant", "maf", "beta", "se", "type")
+  if (!all(need %in% hdr)) stop("unexpected eQTL columns: ", paste(hdr, collapse = ","))
+  ix <- as.list(match(need, hdr)); names(ix) <- need
+  awk <- sprintf(paste0("awk -F'\\t' -v OFS='\\t' -v G=%s -v D=%s -v cg=%d -v cc=%d -v cp=%d -v cr=%d -v ca=%d -v cv=%d -v cm=%d -v cb=%d -v cs=%d -v ct=%d '",
+    "BEGIN{while((getline l < G)>0){split(l,x,\"\\t\"); T[x[1]]=x[2]}} NR==1{next} $ct!=\"SNP\"{next} ($cm+0)<0.05{next} ($cs+0)<=0{next} ",
+    "length($cr)!=1||length($ca)!=1{next} {g=$cg; sub(/\\..*$/,\"\",g); if(!(g in T)) next; c=$cc; sub(/^chr/,\"\",c); if(c !~ /^[0-9]+$/) next; ",
+    "f=D \"/chr\" c \".tsv.gz\"; p=\"gzip > \" f; P[p]=1; print g,$cv,$cp,$cp-T[g],$cb/$cs | p} END{for(p in P) close(p)}'"),
+    shQuote(gfile), shQuote(sdir), ix$gene_id, ix$chromosome, ix$position, ix$ref, ix$alt, ix$variant, ix$maf, ix$beta, ix$se, ix$type)
+  say("splitting the eQTL file (one pass)")
   st <- system(paste(zcat(f_pairs), "|", awk))
   if (st != 0) stop("awk failed")
   writeLines("DONE", file.path(sdir, "DONE"))
