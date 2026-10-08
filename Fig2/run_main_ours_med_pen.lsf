@@ -1,0 +1,15 @@
+#BSUB -J main_ours_med_pen[1-2400]%200
+#BSUB -W 12:00
+#BSUB -o Fig2/errDir/main_ours_med_pen_%I.out
+#BSUB -e Fig2/errDir/main_ours_med_pen_%I.err
+#BSUB -q medium
+#BSUB -n 4
+#BSUB -R "span[hosts=1] rusage[mem=8]"
+#BSUB -M 8
+
+# run 1-2400
+# Submit from the repository root:  bsub < Fig2/run_main_ours_med_pen.lsf
+# (queue, memory unit and module name may need to be adapted to the cluster)
+module load R/4.5.1
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript Fig2/main_ours_med_pen_sim.R $LSB_JOBINDEX

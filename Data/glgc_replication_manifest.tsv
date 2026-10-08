@@ -1,0 +1,11 @@
+label	relative_path	beta_col	se_col	p_col	af_col	n_col
+AFR_female	replication/GLGC_LDL_sex_ancestry/LDL_INV_AFR_HRC_1KGP3_others_FEMALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+AFR_male	replication/GLGC_LDL_sex_ancestry/LDL_INV_AFR_HRC_1KGP3_others_MALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+EAS_female	replication/GLGC_LDL_sex_ancestry/LDL_INV_EAS_1KGP3_FEMALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+EAS_male	replication/GLGC_LDL_sex_ancestry/LDL_INV_EAS_1KGP3_MALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+EUR_female	replication/GLGC_LDL_sex_ancestry/LDL_INV_EUR_HRC_1KGP3_others_FEMALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+EUR_male	replication/GLGC_LDL_sex_ancestry/LDL_INV_EUR_HRC_1KGP3_others_MALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+HIS_female	replication/GLGC_LDL_sex_ancestry/LDL_INV_HIS_1KGP3_FEMALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+HIS_male	replication/GLGC_LDL_sex_ancestry/LDL_INV_HIS_1KGP3_MALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+SAS_female	replication/GLGC_LDL_sex_ancestry/LDL_INV_SAS_HRC_1KGP3_others_FEMALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
+SAS_male	replication/GLGC_LDL_sex_ancestry/LDL_INV_SAS_HRC_1KGP3_others_MALE.meta.singlevar.results.gz	EFFECT_SIZE	SE	pvalue	POOLED_ALT_AF	N
