@@ -13,7 +13,7 @@ L <- c("\\begin{table}[htbp]", "\\centering",
     "and for exchangeable-restriction fits with two floors. The design is described in the text.}\\label{tab:floor-bias}"), max(g$n)),
   "\\begin{tabular}{@{}lccc@{}}", "\\toprule", "Target & Oracle & $a_\\omega=1/64$ & $a_\\omega=10^{-4}$\\\\", "\\midrule")
 for (tg in c("pleiotropy", "replication", "mediation"))
-  L <- c(L, sprintf("%s & %s & %s & %s\\\\", TARGET_NAME[[tg]], cell(tg, "oracle"), cell(tg, "floor_0.015625"), cell(tg, "floor_1e-04")))
+  L <- c(L, sprintf("%s & %s & %s & %s\\\\", TARGET_NAME[[tg]], cell(tg, "oracle"), cell(tg, "floor_0.015625"), cell(tg, "floor_0.0001")))
 write_tex(c(L, "\\bottomrule", "\\end{tabular}", "\\end{table}"), here::here("SuppTab4", "SuppTab4.tex"))
 cat(sprintf("fitted mass on sizes 2-4 with floor 1/64: %s (3/64 = %.4f)\n",
             paste(sprintf("%.4f", range(d[fit == "floor_0.015625"]$omega2to4)), collapse = "-"), 3 / 64))
