@@ -39,7 +39,7 @@ export SMOKE=1
 Rscript Fig4/realdata_fit.R 1
 JOB
   bsub < SuppTab4/run_SuppTab4.lsf
-  RAW=${RAW_GLGC:-$(dirname $(dirname $(find /rsrch8/home/biostatistics/zliu20 -maxdepth 8 -name "LDL_INV_EUR_HRC_1KGP3_others_MALE.meta.singlevar.results.gz" 2>/dev/null | head -1)))}
+  RAW=${RAW_GLGC:-$(dirname $(dirname $(dirname $(find /rsrch8/home/biostatistics/zliu20 -maxdepth 8 -name "LDL_INV_EUR_HRC_1KGP3_others_MALE.meta.singlevar.results.gz" 2>/dev/null | head -1))))}
   echo "raw GLGC folder: $RAW"
   bsub -J "glgc_prep" -q medium -n 1 -W 8:00 -M 64 -R "span[hosts=1] rusage[mem=64]" -o tests/errDir/glgc_prep.out -e tests/errDir/glgc_prep.err <<JOB
 module load R/4.5.1
