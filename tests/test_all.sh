@@ -13,7 +13,7 @@ module load R/4.5.1 2>/dev/null
 case $mode in
 local)
   Rscript tests/check_syntax.R || exit 1
-  Rscript setup.R ${CSMGMMCORR_SRC:-} 2>&1 | tee tests/setup.log | tail -15
+  ls SupportingCode/src/reprokernels.* >/dev/null 2>&1 || { Rscript setup.R ${CSMGMMCORR_SRC:-} 2>&1 | tee tests/setup.log | tail -15; }
   bash tests/link_existing_results.sh | tee tests/link.log
   mkdir -p tests/logs
   for s in Fig1/plot_fig1.R Fig2/plot_fig2.R SuppFig1/plot_suppfig1_12.R Tab1/make_tab1.R Fig3/plot_fig3.R Tab2/make_tab2.R \
