@@ -206,3 +206,59 @@ rd_collect <- function(out_root = here::here("Fig4", "output")) {
   }), fill = TRUE)
   list(summary = rd("summary.tsv"), sigma = rd("sigma.tsv"), fit_runs = rd("fit_runs.tsv"), iqr_sd = rd("iqr_sd.tsv"))
 }
+
+# ---- Mediation: lung squamous cell carcinoma, one analysis per sentinel SNP --------------------
+# Design of Sun, McCaw and Lin (2025, Section 6): for each of 15 lung-cancer sentinel SNPs, the
+# features are genes; alpha_g = SNP -> expression in tissue g (GTEx v8), beta_g = expression in
+# tissue g -> squamous cell carcinoma (S-PrediXcan). Three tissues give K = 6. The primary tissue
+# set is MED_TISSUES[[1]]; the others are sensitivity analyses.
+MED_FILE <- function() here::here("Data", "mediation", "mediation_scc_bysnp.tsv.gz")
+MED_SNPS <- c("rs71658797", "rs6920364", "rs11780471", "rs55781567", "rs56113850", "rs13080835", "rs7705526",
+              "rs4236709", "rs885518", "rs11591710", "rs1056562", "rs77468143", "rs41309931", "rs116822326", "rs7953330")
+MED_TISSUES <- list(blood_liver_adipose = c("blood", "liver", "adipose"),
+                    blood_adipose_aorta = c("blood", "adipose", "aorta"),
+                    blood_liver_aorta   = c("blood", "liver", "aorta"))
+MED_JOBS <- expand.grid(snp = MED_SNPS, variant = c("main", "indep", "robust"), tissues = names(MED_TISSUES),
+                        stringsAsFactors = FALSE)
+
+run_mediation <- function(snp, variant, tissues = names(MED_TISSUES)[1], out_root = here::here("Fig4", "output", "mediation"),
+                          cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:2) {
+  suppressMessages({ library(data.table); library(csmGmmCorr) })
+  stopifnot(snp %in% MED_SNPS, variant %in% c("main", "indep", "robust"), tissues %in% names(MED_TISSUES))
+  cols <- as.vector(outer(c("alpha_", "beta_"), MED_TISSUES[[tissues]], paste0))
+  s0 <- snp; d <- freadgz(MED_FILE()); d <- d[d[["snp"]] == s0]
+  d <- d[stats::complete.cases(d[, cols, with = FALSE])]
+  Z <- capz(as.matrix(d[, cols, with = FALSE]), cap); K <- ncol(Z)
+  out <- file.path(out_root, tissues, paste0(snp, "_", variant)); dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  say("mediation %s (%s), %s, tissues %s: %d genes, K = %d", snp, d$snp_gene[1], variant, tissues, nrow(Z), K)
+  ref <- reference_cors(Z)
+  fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))
+  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = 0.5, b_mu = 15)
+  ctl <- csm_control(max_iter = 5000L, penalty = 30, weight_penalty = 10, fix_sigma = fs, cores = cores)
+  t0 <- proc.time()[3]
+  fit <- csm_fit(Z, spec, starts = c("null", "shared"), control = ctl)
+  fit_min <- (proc.time()[3] - t0) / 60
+  Sig <- if (is.null(fit$params)) matrix(NA, K, K) else fit$params$Sigma
+  ij <- which(upper.tri(Sig), arr.ind = TRUE)
+  fwrite(data.table(snp = snp, variant = variant, tissues = tissues, stat1 = cols[ij[, 1]], stat2 = cols[ij[, 2]],
+                    fitted = Sig[ij], robust = ref$robust[ij], pearson = ref$pearson[ij]), file.path(out, "sigma.tsv"), sep = "\t")
+  rows <- list(); disc <- list()
+  for (t in ts) {
+    if (!fit$converged) break
+    lf <- csm_lfdr(fit, Z, "mediation", t, cores = cores)
+    su <- csm_stepup(lf, q)
+    ad <- csm_adjust(Z, lf, "mediation", t, q)
+    ex <- if (su$n_rejected > 0) csm_extrapolation(fit, Z, "mediation", t, rejected = su$rejected, cutoff = su$cutoff)$flag else rep(NA, nrow(Z))
+    rows[[length(rows) + 1L]] <- data.table(snp = snp, snp_gene = d$snp_gene[1], variant = variant, tissues = tissues, t = t,
+      n_genes = nrow(Z), converged = fit$converged, loglik = fit$loglik, fit_minutes = round(fit_min, 2),
+      null_weight = sum(fit$params$varpi[fit$spec$grp_size == 0]),
+      R_raw = su$n_rejected, R_adj = sum(ad$rejected), extrap_flags = sum(ex, na.rm = TRUE),
+      genes = paste(d$gene[su$rejected][order(lf[su$rejected])], collapse = ","))
+    if (any(su$rejected)) disc[[length(disc) + 1L]] <- data.table(t = t, gene = d$gene[su$rejected], Z[su$rejected, , drop = FALSE],
+                                                                    lfdr = lf[su$rejected], extrap = ex[su$rejected])
+  }
+  if (length(rows)) fwrite(rbindlist(rows), file.path(out, "summary.tsv"), sep = "\t")
+  if (length(disc)) fwrite(rbindlist(disc), file.path(out, "discoveries.tsv"), sep = "\t")
+  writeLines("DONE", file.path(out, "DONE"))
+  invisible(out)
+}
