@@ -1,4 +1,4 @@
-#BSUB -J mediation[1-135]
+#BSUB -J mediation[1-855]
 #BSUB -W 4:00
 #BSUB -o Fig4/errDir/mediation_%I.out
 #BSUB -e Fig4/errDir/mediation_%I.err
@@ -7,7 +7,7 @@
 #BSUB -R "span[hosts=1] rusage[mem=8]"
 #BSUB -M 8
 
-# run 1-135   (jobs listed in Fig4/mediation_fit.R)
+# run 1-855   (jobs listed in Fig4/mediation_fit.R)
 # Submit from the repository root:  bsub < Fig4/run_mediation.lsf
 module load R/4.5.1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1

@@ -217,11 +217,16 @@ MED_SNPS <- c("rs71658797", "rs6920364", "rs11780471", "rs55781567", "rs56113850
               "rs4236709", "rs885518", "rs11591710", "rs1056562", "rs77468143", "rs41309931", "rs116822326", "rs7953330")
 MED_TISSUES <- list(blood_liver_adipose = c("blood", "liver", "adipose"),
                     blood_adipose_aorta = c("blood", "adipose", "aorta"),
-                    blood_liver_aorta   = c("blood", "liver", "aorta"))
-MED_JOBS <- expand.grid(snp = MED_SNPS, variant = c("main", "indep", "robust"), tissues = names(MED_TISSUES),
-                        stringsAsFactors = FALSE)
+                    blood_liver_aorta   = c("blood", "liver", "aorta"),
+                    blood = "blood", liver = "liver", adipose = "adipose", aorta = "aorta", coronary = "coronary")
+.med_grid <- function(tissues, a_mu) expand.grid(snp = MED_SNPS, variant = c("main", "indep", "robust"), tissues = tissues,
+                                                 a_mu = a_mu, stringsAsFactors = FALSE)
+MED_COMBOS <- names(MED_TISSUES)[1:3]; MED_SINGLE <- names(MED_TISSUES)[4:8]
+# jobs 1-135: three tissues, a_mu = 0.5; 136-405: three tissues, a_mu = 1.5 and 2;
+# 406-855: one tissue (K = 2, the design of Sun et al.), a_mu = 0.5 and 1.5
+MED_JOBS <- rbind(.med_grid(MED_COMBOS, 0.5), .med_grid(MED_COMBOS, c(1.5, 2)), .med_grid(MED_SINGLE, c(0.5, 1.5)))
 
-run_mediation <- function(snp, variant, tissues = names(MED_TISSUES)[1], out_root = here::here("Fig4", "output", "mediation"),
+run_mediation <- function(snp, variant, tissues = names(MED_TISSUES)[1], a_mu = 0.5, out_root = here::here("Fig4", "output", "mediation"),
                           cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:2) {
   suppressMessages({ library(data.table); library(csmGmmCorr) })
   stopifnot(snp %in% MED_SNPS, variant %in% c("main", "indep", "robust"), tissues %in% names(MED_TISSUES))
@@ -229,27 +234,30 @@ run_mediation <- function(snp, variant, tissues = names(MED_TISSUES)[1], out_roo
   s0 <- snp; d <- freadgz(MED_FILE()); d <- d[d[["snp"]] == s0]
   d <- d[stats::complete.cases(d[, cols, with = FALSE])]
   Z <- capz(as.matrix(d[, cols, with = FALSE]), cap); K <- ncol(Z)
-  out <- file.path(out_root, tissues, paste0(snp, "_", variant)); dir.create(out, recursive = TRUE, showWarnings = FALSE)
-  say("mediation %s (%s), %s, tissues %s: %d genes, K = %d", snp, d$snp_gene[1], variant, tissues, nrow(Z), K)
+  vlab <- rd_label(variant, a_mu)
+  out <- file.path(out_root, tissues, paste0(snp, "_", vlab)); dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  say("mediation %s (%s), %s, a_mu = %g, tissues %s: %d genes, K = %d", snp, d$snp_gene[1], variant, a_mu, tissues, nrow(Z), K)
   ref <- reference_cors(Z)
   fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))
-  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = 0.5, b_mu = 15)
+  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), a_mu = a_mu, b_mu = 15)
   ctl <- csm_control(max_iter = 5000L, penalty = 30, weight_penalty = 10, fix_sigma = fs, cores = cores)
   t0 <- proc.time()[3]
   fit <- csm_fit(Z, spec, starts = c("null", "shared"), control = ctl)
   fit_min <- (proc.time()[3] - t0) / 60
+  variant <- vlab
   Sig <- if (is.null(fit$params)) matrix(NA, K, K) else fit$params$Sigma
   ij <- which(upper.tri(Sig), arr.ind = TRUE)
   fwrite(data.table(snp = snp, variant = variant, tissues = tissues, stat1 = cols[ij[, 1]], stat2 = cols[ij[, 2]],
                     fitted = Sig[ij], robust = ref$robust[ij], pearson = ref$pearson[ij]), file.path(out, "sigma.tsv"), sep = "\t")
   rows <- list(); disc <- list()
+  ts <- ts[ts < K]                                   # K = 2: t = 1 only
   for (t in ts) {
     if (!fit$converged) break
     lf <- csm_lfdr(fit, Z, "mediation", t, cores = cores)
     su <- csm_stepup(lf, q)
     ad <- csm_adjust(Z, lf, "mediation", t, q)
     ex <- if (su$n_rejected > 0) csm_extrapolation(fit, Z, "mediation", t, rejected = su$rejected, cutoff = su$cutoff)$flag else rep(NA, nrow(Z))
-    rows[[length(rows) + 1L]] <- data.table(snp = snp, snp_gene = d$snp_gene[1], variant = variant, tissues = tissues, t = t,
+    rows[[length(rows) + 1L]] <- data.table(snp = snp, snp_gene = d$snp_gene[1], variant = variant, a_mu = a_mu, tissues = tissues, t = t,
       n_genes = nrow(Z), converged = fit$converged, loglik = fit$loglik, fit_minutes = round(fit_min, 2),
       null_weight = sum(fit$params$varpi[fit$spec$grp_size == 0]),
       R_raw = su$n_rejected, R_adj = sum(ad$rejected), extrap_flags = sum(ex, na.rm = TRUE),
