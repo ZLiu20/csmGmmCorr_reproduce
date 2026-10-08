@@ -26,7 +26,7 @@ for (tg in names(METH)) for (K0 in c(4, 6)) for (t0 in 1:2) {
     panels[[length(panels) + 1]] <- sim_panel(z[axis == ax], row, METH[[tg]], xl, yl, lim, hline = row == "FDP",
                                               sym = if (row == "FDP") sy[axis == ax] else NULL)
   }
-  p <- combine_panels(panels, nrow = 3, legend = 1, rel = 0.1, ncol_legend = 2)
+  p <- combine_panels(panels, nrow = 3, legend = legend_plot(c(METH[[tg]], "sym")), rel = 0.1, ncol_legend = 2)
   f <- here::here("SuppFig1", sprintf("SuppFig%d_%s_K%d_t%d.pdf", k, tg, K0, t0))
   ggsave(f, p, width = 14, height = 18); message("wrote ", f)
 }

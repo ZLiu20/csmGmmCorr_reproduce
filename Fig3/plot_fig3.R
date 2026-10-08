@@ -22,6 +22,9 @@ for (tg in c("pleiotropy", "replication", "mediation")) for (what in c("FDP", "p
   p <- if (what == "FDP") p + fdp_line() + coord_cartesian(ylim = c(0, 0.5)) else p + coord_cartesian(ylim = c(0, 1))
   panels[[length(panels) + 1]] <- p
 }
-p <- combine_panels(panels, nrow = 3, legend = 1, rel = 0.08, ncol_legend = 4)
+lg <- ggplot(data.frame(x = rep(1:2, 4), y = 1, Setting = factor(rep(levels(R$Setting), each = 2), levels = levels(R$Setting))),
+             aes(x, y, group = Setting)) + geom_line(aes(color = Setting, linetype = Setting), linewidth = 1.2) +
+  scale_color_manual(values = cols) + scale_linetype_manual(values = 1:4) + theme_paper()
+p <- combine_panels(panels, nrow = 3, legend = lg, rel = 0.08, ncol_legend = 4)
 ggsave(here::here("Fig3", "Fig3.pdf"), p, width = 14, height = 18)
 message("wrote Fig3/Fig3.pdf")

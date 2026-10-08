@@ -18,7 +18,7 @@ panel <- function(d, o, cats, title, legtitle) {
   d <- copy(d); d[, chr := as.integer(chr)]
   d[, x := pos + o$off[chr]]; d[, y := -log10(pmax(lfdr, 10^-CAP))]
   d[, cat := factor(cat, levels = cats)]
-  labs <- sprintf("%s (%s)", cats, format(as.vector(table(d$cat)[cats]), big.mark = ","))
+  labs <- sprintf("%s (%s)", cats, formatC(as.vector(table(d$cat)[cats]), format = "d", big.mark = ","))
   brk <- o$off + o$mx / 2; lab <- ifelse(1:22 %in% c(9, 11, 13, 15, 16, 17, 19, 20, 21), "", as.character(1:22))
   ggplot(d, aes(x, y, color = cat, shape = cat)) + geom_point(size = if (nrow(d) > 1e5) 0.6 else 1.6) +
     scale_color_manual(values = setNames(grDevices::hcl(c(15, 255), 100, 65), cats), labels = labs, name = legtitle) +

@@ -35,7 +35,7 @@ pC <- ggplot(adj, aes(analysis, pct, fill = t)) + geom_col(position = position_d
   geom_text(aes(label = sprintf("%.0f%%", pct)), position = position_dodge(0.8), vjust = -0.3, size = 4) +
   scale_fill_manual(values = c("#3C3C3C", "#A8A8A8"), name = NULL) + coord_cartesian(ylim = c(0, 110)) +
   xlab(NULL) + ylab("Adjusted / unadjusted\ndiscoveries (%)") + ggtitle("Monotone adjustment") +
-  theme_paper(15) + theme(plot.title = element_text(size = 18, face = "plain"), legend.position = c(0.8, 0.95))
+  theme_paper(15) + theme(plot.title = element_text(size = 18, face = "plain"), legend.position = c(0.85, 0.8), legend.key.size = unit(1.2, "line"))
 gw <- dcast(G[variant == "main" & analysis %in% c("glgc_replication", "ukb_pleiotropy")], analysis + stat1 + stat2 ~ what, value.var = "value")
 gw[, Analysis := c(glgc_replication = "Replication, GLGC (K = 6)", ukb_pleiotropy = "Pleiotropy, UK Biobank (K = 5)")[analysis]]
 mcol <- c("Replication, GLGC (K = 6)" = grDevices::hcl(240, 100, 55), "Pleiotropy, UK Biobank (K = 5)" = grDevices::hcl(105, 100, 55))

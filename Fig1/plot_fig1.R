@@ -72,6 +72,7 @@ C <- rbind(data.frame(x = x, y = lfdr(ray(c(0, 1.5, 1.5, 1.5), c(1, 0, 0, 0)), 0
            data.frame(x = x, y = lfdr(cbind(x / 2, x / 2, x / 2, x / 2), 0.3, "replication"), setting = lv[3]))
 p <- plot_grid(mk(A, "Pleiotropy lfdr (t = 1)", "A. Along (z1, 0, 0, 0)"),
                mk(Bd, "Pleiotropy lfdr (t = 1)", "B. Along (z1, 1.5, 1.5, 1.5)", shade = iv) + theme(legend.position = "none"),
-               mk(C, "Replication lfdr (t = 1)", "C. Replication; lines 1-2 along (z1, 1.5, 1.5, 1.5)"), nrow = 1)
+               mk(C, "Replication lfdr (t = 1)", "C. Replication; lines 1-2 along (z1, 1.5, 1.5, 1.5)") +
+                 theme(legend.position = c(0.33, 0.45), legend.text = element_text(size = 11)), nrow = 1)
 ggsave(here::here("Fig1", "Fig1.pdf"), p, width = 18, height = 5.6)
 message("wrote Fig1/Fig1.pdf")
