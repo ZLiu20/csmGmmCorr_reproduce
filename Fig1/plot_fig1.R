@@ -1,4 +1,4 @@
-# Figure 1 and the numerical statements of Example 1 and Section 4.1 (exact computations; no
+# Figure 1 and the numerical statements of Example 1 (Section 3.1) and Section 4.1 (exact computations; no
 # simulation). Model of Example 1: K = 4, one magnitude component per support with all
 # magnitudes 2, support-size probabilities (0.6, 0.2, 0.1, 0.06, 0.04), spread uniformly
 # within sizes and signs, and equicorrelation 0.3.

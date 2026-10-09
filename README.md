@@ -1,12 +1,39 @@
 # csmGmmCorr_reproduce
 
 Code to reproduce the simulations, the data analyses, and every figure and table of the paper
-"Correlated csmGmm: Composite Null Testing with Correlated Statistics" by Zili Liu and Ryan Sun,
+"Correlated csmGmm: Composite Null Testing and Posterior Ranking in Genome-Wide Studies" by Zili
+Liu and Ryan Sun,
 and of its Supplementary Material.
 
 The method is implemented in the R package **csmGmmCorr** (version 1.3.0), which is in its own
 repository. This repository holds only the code that uses the package. It follows the layout of
 `csmGmm_reproduce` (Sun, McCaw and Lin, 2025).
+
+## Reproducing everything in one run
+
+On the cluster, in a fresh clone (login node with internet access):
+
+```
+git clone <repository> csmGmmCorr_rerun && cd csmGmmCorr_rerun
+mkdir -p logs && nohup bash run_all.sh > logs/run_all.log 2>&1 &
+```
+
+`run_all.sh` runs `setup.R`, submits all simulation arrays, downloads the summary statistics
+(about 45 GB) while the simulations run, submits the data preparation and the application fits
+with LSF dependencies, and submits a final job that waits for everything, runs `make_all.sh`
+(every `plot_` and `make_` script) and `tests/verify.R`. The report `logs/verify_report.txt`
+compares every regenerated table, and the numbers behind every figure, with the values of the
+paper in `reference/`: IDENTICAL, EQUAL (within a relative tolerance of 1e-6), DIFFERENT or
+MISSING. It also compares the R and package versions with `reference/versions.txt`.
+
+- `bash run_all.sh status` shows the progress; repeating `bash run_all.sh` resumes (finished
+  replicates and fits are skipped; `RERUN=1` refits the applications).
+- After resubmitting failed tasks, `bash run_all.sh final` submits the final job again.
+- Every simulation replicate regenerates its data from fixed seeds and every fit is deterministic, so the
+  results do not depend on the order or the nodes on which the jobs run.
+- The simulations take most of the time: about 18,000 tasks of up to 16 hours each (see the
+  table of wall times below), so the total time depends mainly on how many tasks the cluster
+  runs at once.
 
 ## Overview
 
@@ -57,13 +84,13 @@ repository. This repository holds only the code that uses the package. It follow
 
 | Paper | Folder | Arrays (tasks) | Script |
 |---|---|---|---|
-| Figure 1 (Example 1, Section 4.1) | Fig1 | none (exact computation, seconds) | plot_fig1.R |
+| Figure 1 (Example 1, Sections 3.1 and 4.1) | Fig1 | none (exact computation, seconds) | plot_fig1.R |
 | Figure 2 | Fig2 | 14 arrays (12,000 tasks): penalized fit (500 replicates), ML fit, sign-symmetric statistics, QCH/adaFilter, DEI/MediationTest/JS-PC | plot_fig2.R |
 | Table 1 | Tab1 | uses Fig2 | make_tab1.R |
 | Figure 3 | Fig3 | 9 arrays (2,400 tasks): correlation study, penalized and ML fits, csmGmm | plot_fig3.R |
 | Table 2 | Tab2 | 16 arrays (2,440 tasks): csmGmm comparison, quantitative outcomes, exchangeable correlation, linkage disequilibrium, independent test set, null-correlation oracle; uses Fig2 and Fig3 | make_tab2.R |
 | Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/` | make_tab3.R, plot_fig4.R, plot_fig5.R, holdout_validation.R |
-| Mediation application (Supplementary Section 8.7) | Fig4 | `run_mediation_ldl.lsf` (20 fits), `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`; requires `Data/` (LDL mediation) | summarize_mediation_ldl.R, diagnose_mediation_ldl.R |
+| Mediation application (Supplementary Section 8.7) | Fig4 | `run_mediation_ldl.lsf` (23 fits), `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`; requires `Data/` (LDL mediation) | summarize_mediation_ldl.R, diagnose_mediation_ldl.R |
 | Supplementary Figures 1-12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
 | Supplementary Table 1 | none | roadmap, text only | |
 | Supplementary Table 2 | SuppTab2 | none (exact counts) | make_supptab2.R |

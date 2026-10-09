@@ -123,6 +123,7 @@ run_realdata <- function(an, variant, a_mu = 0.5, out_root = here::here("Fig4", 
   maxit <- if (smoke) 300L else 5000L
   out <- file.path(if (smoke) sub("output$", "output_smoke", out_root) else out_root, paste0(an, "_", vlab))
   dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  if (file.exists(file.path(out, "DONE")) && Sys.getenv("RERUN", "0") != "1") { say("already done: %s (set RERUN=1 to refit)", out); return(invisible(out)) }
   say("analysis %s, variant %s, a_mu = %g, csmGmmCorr %s, cores %d, smoke %s", an, variant, a_mu,
       as.character(utils::packageVersion("csmGmmCorr")), cores, smoke)
   dat <- rd_load(an, cap, smoke)
@@ -193,8 +194,12 @@ run_realdata <- function(an, variant, a_mu = 0.5, out_root = here::here("Fig4", 
 }
 
 # Combine the outputs of all fits (used by the plotting and table scripts).
+rd_fit_dirs <- function(out_root = here::here("Fig4", "output"))
+  file.path(out_root, paste0(RD_JOBS$analysis, "_", mapply(rd_label, RD_JOBS$variant, RD_JOBS$a_mu)))
+medldl_fit_dirs <- function(out_root = here::here("Fig4", "output", "mediation_ldl"))
+  file.path(out_root, paste0(MEDLDL_JOBS$set, "_", mapply(rd_label, MEDLDL_JOBS$variant, MEDLDL_JOBS$a_mu)))
 rd_collect <- function(out_root = here::here("Fig4", "output")) {
-  dirs <- list.dirs(out_root, recursive = FALSE)
+  dirs <- rd_fit_dirs(out_root)        # the 13 fits of RD_JOBS (other folders are ignored)
   # analysis and fit label are taken from the folder name <analysis>_<label>
   rd <- function(f) data.table::rbindlist(lapply(dirs[file.exists(file.path(dirs, f))], function(d) {
     x <- data.table::fread(file.path(d, f)); b <- basename(d)
@@ -220,7 +225,8 @@ MEDLDL_COLS <- c("alpha1", "beta1", "alpha2", "beta2", "alpha3", "beta3")
 MEDLDL_JOBS <- rbind(expand.grid(set = "noshare", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
                      expand.grid(set = "nearest", variant = "main", a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
                      expand.grid(set = "noshare_dedup", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
-                     expand.grid(set = "noshare_cond", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE))
+                     expand.grid(set = "noshare_cond", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
+                     expand.grid(set = "noshare", variant = c("main", "indep", "robust"), a_mu = 3, stringsAsFactors = FALSE))
 # one variant per gene triple (the triple as an unordered set of genes)
 medldl_dedup <- function(d) {
   key <- apply(d[, .(gene1, gene2, gene3)], 1, function(g) paste(sort(g), collapse = ","))
@@ -242,6 +248,7 @@ run_mediation_ldl <- function(set, variant, a_mu = 0.5, out_root = here::here("F
   ntrip <- function(sel) uniqueN(d[sel, gcols, with = FALSE])
   vlab <- paste0(set, "_", rd_label(variant, a_mu))
   out <- file.path(out_root, vlab); dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  if (file.exists(file.path(out, "DONE")) && Sys.getenv("RERUN", "0") != "1") { say("already done: %s (set RERUN=1 to refit)", out); return(invisible(out)) }
   say("mediation (liver, LDL), %s: %d variants, %d gene triples, K = %d", vlab, nrow(Z), ntrip(TRUE), K)
   ref <- reference_cors(Z)
   fs <- switch(variant, main = FALSE, indep = TRUE, robust = project_cor(ref$robust, 0.05))

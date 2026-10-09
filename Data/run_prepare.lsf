@@ -11,7 +11,7 @@
 # Submit from the repository root after bash Data/download_data.sh:  bsub < Data/run_prepare.lsf
 module load R/4.5.1
 case $LSB_JOBINDEX in
-  1) Rscript Data/prepare_glgc.R replication ;;
-  2) Rscript Data/prepare_glgc.R pleiotropy ;;
-  3) Rscript Data/prepare_ukb.R ;;
+  1) Rscript Data/prepare_glgc.R replication && touch Data/prepared/glgc_replication/DONE ;;
+  2) Rscript Data/prepare_glgc.R pleiotropy && touch Data/prepared/glgc_pleiotropy/DONE ;;
+  3) Rscript Data/prepare_ukb.R && touch Data/prepared/ukb_pleiotropy/DONE ;;
 esac

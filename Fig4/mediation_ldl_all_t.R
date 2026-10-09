@@ -13,7 +13,7 @@ here::i_am("Fig4/mediation_ldl_all_t.R")
 source(here::here("SupportingCode", "load_all.R"))
 suppressMessages({ library(data.table); library(csmGmmCorr) })
 od <- here::here("Fig4", "output", "mediation_ldl")
-dirs <- sort(list.dirs(od, recursive = FALSE)); dirs <- dirs[file.exists(file.path(dirs, "fit.rds"))]
+dirs <- sort(medldl_fit_dirs(od)); dirs <- dirs[file.exists(file.path(dirs, "fit.rds"))]
 arg <- commandArgs(trailingOnly = TRUE)[1]
 if (identical(arg, "summary")) {
   x <- rbindlist(lapply(file.path(dirs, "all_t.tsv"), function(f) if (file.exists(f)) fread(f)), fill = TRUE)

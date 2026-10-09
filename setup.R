@@ -6,7 +6,7 @@ args <- commandArgs(trailingOnly = TRUE)
 repos <- "https://cloud.r-project.org"
 lib <- .libPaths()[1]
 cran <- c("here", "data.table", "ggplot2", "cowplot", "remotes",
-          "qch", "repfdr",                                                   # comparison methods
+          "qch", "repfdr", "RSQLite",                                                   # comparison methods
           "dplyr", "lpSolve", "R.methodsS3", "R.oo", "R.utils", "stringr", "tibble", "tidyr")   # mediation.test
 for (p in cran) if (!requireNamespace(p, quietly = TRUE)) install.packages(p, lib = lib, repos = repos)
 if (!requireNamespace("adaFilter", quietly = TRUE))
@@ -18,6 +18,14 @@ if (length(args)) {
 } else if (!requireNamespace("csmGmmCorr", quietly = TRUE) || utils::packageVersion("csmGmmCorr") < "1.3.0") {
   remotes::install_github(Sys.getenv("CSMGMMCORR_REPO", "zliu20/csmGmmCorr"), lib = lib, upgrade = "never")
 }
+if (!requireNamespace("csmGmm", quietly = TRUE))                  # Sun et al.'s package, for Validation/
+  tryCatch(remotes::install_github("ryanrsun/csmGmm", lib = lib, upgrade = "never"),
+           error = function(e) message("csmGmm not installed (only Validation/ needs it): ", conditionMessage(e)))
+# versions used (compared with reference/versions.txt by tests/verify.R)
+dir.create("logs", showWarnings = FALSE)
+pk <- c("csmGmmCorr", "csmGmm", "data.table", "ggplot2", "cowplot", "qch", "repfdr", "mediation.test", "RSQLite", "here")
+writeLines(c(paste("R", getRversion()), vapply(pk, function(p) paste(p, tryCatch(as.character(utils::packageVersion(p)), error = function(e) "absent")), "")),
+           file.path("logs", "versions.txt"))
 # compiled kernels
 src <- file.path("SupportingCode", "src")
 owd <- setwd(src); r <- system(paste(shQuote(file.path(R.home("bin"), "R")), "CMD SHLIB -o",

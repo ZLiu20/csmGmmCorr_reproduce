@@ -79,7 +79,7 @@ Rscript tests/test_prepare_mediation_ldl.R     # seconds; synthetic check of the
 bsub < Data/run_prepare_mediation_ldl.lsf      # set RAW_GLGC if the GLGC files are not in Data/raw/glgc
 bash Data/download_1000g.sh                    # 1000 Genomes phase 3 (EUR reference for conditional alpha)
 bsub < Data/run_prepare_mediation_ldl_cond.lsf # conditional alpha (sensitivity analysis)
-bsub < Fig4/run_mediation_ldl.lsf              # 20 fits
+bsub < Fig4/run_mediation_ldl.lsf              # 23 fits
 bsub < Fig4/run_mediation_ldl_all_t.lsf        # t = 1, ..., 5 from the saved fits
 bsub < Fig4/run_mediation_ldl_compare.lsf      # csmGmm (Sigma = I), DEI, MediationTest, JS-PC
 Rscript Fig4/summarize_mediation_ldl.R
