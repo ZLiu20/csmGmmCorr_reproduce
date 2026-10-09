@@ -1,0 +1,6 @@
+fit	t	n	R_raw	R_adj	strong_target_data	strong_target_loci_data	strong_target_rej	all_alpha_lt2	loci	loci_with_strong
+nearest_main	1	198740	32875	23291	988	170	912	17405	2023	169
+nearest_main	2	198740	31797	22355	670	115	629	17138	1982	115
+nearest_main	3	198740	13120	12504	335	61	324	7387	722	64
+nearest_main	4	198740	4312	2405	61	16	40	2348	431	11
+nearest_main	5	198740	22	22	4	2	4	0	5	2

@@ -1,0 +1,6 @@
+fit	t	n	R_raw	R_adj	strong_target_data	strong_target_loci_data	strong_target_rej	all_alpha_lt2	loci	loci_with_strong
+noshare_cond_indep	1	174620	22796	16753	448	127	404	15976	1313	128
+noshare_cond_indep	2	174620	21691	16084	272	79	223	15217	1295	74
+noshare_cond_indep	3	174620	11046	9418	131	42	109	8350	498	37
+noshare_cond_indep	4	174620	4109	1781	14	5	11	3102	330	4
+noshare_cond_indep	5	174620	14	14	0	0	0	0	7	0

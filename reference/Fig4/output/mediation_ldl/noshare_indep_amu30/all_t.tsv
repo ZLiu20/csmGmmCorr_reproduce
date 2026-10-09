@@ -1,0 +1,6 @@
+fit	t	n	R_raw	R_adj	strong_target_data	strong_target_loci_data	strong_target_rej	all_alpha_lt2	loci	loci_with_strong
+noshare_indep_amu30	1	197890	10835	9945	948	168	872	3229	1005	166
+noshare_indep_amu30	2	197890	9810	9013	629	111	589	3249	867	112
+noshare_indep_amu30	3	197890	6002	5731	285	56	261	3150	346	56
+noshare_indep_amu30	4	197890	1275	912	47	15	29	662	124	10
+noshare_indep_amu30	5	197890	7	7	3	1	3	0	3	1

@@ -1,0 +1,15 @@
+\begin{table}[!htbp]
+\centering
+\caption{Replication in held-out strata. For the lead variant of each locus (greedy clumping, $\pm500$~kb), the direction $d$ is the sign of the sum of its six analysed statistics, and $S=d\,(z_{\mathrm{HIS},F}+z_{\mathrm{HIS},M}+z_{\mathrm{SAS},F}+z_{\mathrm{SAS},M})/2$ combines the four Hispanic and South Asian strata, which were not used in the analysis. Columns: share with $S>0$ (same direction), with $S>1.645$ and with $S>3.09$ (one-sided $p<0.05$ and $p<0.001$), and the mean number of the four held-out strata with the same sign. ``$\bSigma=I$ only'': loci of the csmGmm with $\bSigma=I$ more than 500~kb from every discovery of the correlated csmGmm. Random variants: 50{,}000 tested variants, with $d$ defined in the same way.}\label{tab:realdata-holdout}
+\small
+\begin{tabular}{lr cccc}
+\toprule
+Loci & $n$ & $S>0$ & $S>1.645$ & $S>3.09$ & Strata with same sign\\
+\midrule
+Correlated csmGmm & 308 & 0.88 & 0.47 & 0.18 & 3.06\\
+$\bSigma=I$, near a correlated csmGmm discovery & 364 & 0.85 & 0.39 & 0.16 & 2.92\\
+$\bSigma=I$ only & 786 & 0.68 & 0.16 & 0.01 & 2.39\\
+Random variants & 50{,}000 & 0.53 & 0.07 & 0.003 & 2.07\\
+\bottomrule
+\end{tabular}
+\end{table}

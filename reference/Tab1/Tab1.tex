@@ -1,0 +1,47 @@
+\begin{table}[!htbp]
+\centering
+\caption{Simulation results averaged over the twelve designs of each target ($q=0.10$): mean FDP, largest design-level mean FDP (Max) and mean power of the correlated csmGmm (500 replicates per design), and mean FDP and power of the comparison procedures (200 replicates; Section~\ref{sec:sim-designs}). Monte Carlo standard errors of design-level mean FDPs are at most 0.006 for the correlated csmGmm and 0.005 for the comparators.}\label{tab:simulation-overview}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{ccccc cc cc}
+\multicolumn{9}{l}{\textit{(a) Pleiotropy}}\\
+\toprule
+ & & \multicolumn{3}{c}{Correlated csmGmm} & \multicolumn{2}{c}{QCH} & \multicolumn{2}{c}{adaFilter}\\
+\cmidrule(lr){3-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+$K$ & $t$ & FDP & Max & Power & FDP & Power & FDP & Power\\
+\midrule
+4 & 1 & 0.097 & 0.104 & 0.609 & 0.093 & 0.598 & 0.080 & 0.553\\
+4 & 2 & 0.099 & 0.119 & 0.728 & 0.109 & 0.707 & 0.053 & 0.622\\
+6 & 1 & 0.099 & 0.116 & 0.683 & 0.098 & 0.672 & 0.079 & 0.633\\
+6 & 2 & 0.110 & 0.157 & 0.811 & 0.128 & 0.791 & 0.050 & 0.717\\
+\bottomrule
+\end{tabular}
+\par\medskip
+\begin{tabular}{ccccc}
+\multicolumn{5}{l}{\textit{(b) Replication}}\\
+\toprule
+ & & \multicolumn{3}{c}{Correlated csmGmm}\\
+\cmidrule(lr){3-5}
+$K$ & $t$ & FDP & Max & Power\\
+\midrule
+4 & 1 & 0.113 & 0.121 & 0.614\\
+4 & 2 & 0.104 & 0.123 & 0.722\\
+6 & 1 & 0.115 & 0.128 & 0.674\\
+6 & 2 & 0.118 & 0.149 & 0.750\\
+\bottomrule
+\end{tabular}
+\par\medskip
+\begin{tabular}{ccccc cc cc cc}
+\multicolumn{11}{l}{\textit{(c) Mediation}}\\
+\toprule
+ & & \multicolumn{3}{c}{Correlated csmGmm} & \multicolumn{2}{c}{DEI} & \multicolumn{2}{c}{MediationTest} & \multicolumn{2}{c}{JS-PC}\\
+\cmidrule(lr){3-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}\cmidrule(lr){10-11}
+$K$ & $t$ & FDP & Max & Power & FDP & Power & FDP & Power & FDP & Power\\
+\midrule
+4 & 1 & 0.091 & 0.109 & 0.795 & 0.002 & 0.443 & 0.001 & 0.355 & 0.001 & 0.356\\
+4 & 2 & 0.088 & 0.105 & 0.835 & 0.000 & 0.273 & 0.000 & 0.269 & 0.000 & 0.273\\
+6 & 1 & 0.107 & 0.161 & 0.821 & 0.002 & 0.456 & 0.001 & 0.322 & 0.001 & 0.325\\
+6 & 2 & 0.103 & 0.143 & 0.860 & 0.000 & 0.302 & 0.000 & 0.260 & 0.000 & 0.261\\
+\bottomrule
+\end{tabular}
+\end{table}

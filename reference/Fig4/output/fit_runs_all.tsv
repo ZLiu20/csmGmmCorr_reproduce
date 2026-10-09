@@ -1,0 +1,27 @@
+analysis	variant	start	status	iterations	warm_iterations	loglik	objective
+glgc_replication	main	null	converged	2483		-9.08429697082927	-9.09387869038068
+glgc_replication	main	shared	converged	665		-9.08382558929351	-9.09403412746479
+glgc_replication	indep	null	converged	686		-9.13086195048889	-9.14125728577233
+glgc_replication	indep	shared	converged	392		-9.13108062145617	-9.14207956733775
+glgc_replication	robust	null	converged	1421		-9.08897088307908	-9.09914216847973
+glgc_replication	robust	shared	converged	596		-9.08996015229642	-9.09950996379655
+glgc_replication	main_amu15	null	converged	200		-9.08696403175337	-9.097618808488
+glgc_replication	main_amu15	shared	converged	392		-9.08721163850884	-9.09743980307581
+glgc_replication	indep_amu15	null	converged	422		-9.13204000697402	-9.14304681158866
+glgc_replication	indep_amu15	shared	converged	422		-9.13254142167464	-9.14391269276985
+ukb_pleiotropy	main	null	converged	506		-8.59314767112888	-8.60609230239646
+ukb_pleiotropy	main	shared	converged	689		-8.59497631054588	-8.60835823056068
+ukb_pleiotropy	indep	null	converged	494		-8.82523220892784	-8.83910115107629
+ukb_pleiotropy	indep	shared	converged	278		-8.82378515371027	-8.83621950247835
+ukb_pleiotropy	robust	null	converged	587		-8.60145153764224	-8.6130888125096
+ukb_pleiotropy	robust	shared	converged	596		-8.59872994249984	-8.61184821551089
+ukb_pleiotropy	main_amu15	null	converged	254		-8.5964906564614	-8.60874994159858
+ukb_pleiotropy	main_amu15	shared	converged	218		-8.59803797594591	-8.61069908484731
+glgc_pleiotropy	main	null	converged	332		-7.21862096972892	-7.23307573043514
+glgc_pleiotropy	main	shared	converged	632		-7.22587169981269	-7.23800149503195
+glgc_pleiotropy	indep	null	converged	203		-8.6673616674973	-8.68434968087137
+glgc_pleiotropy	indep	shared	converged	191		-8.66737559863698	-8.68501856334139
+glgc_pleiotropy	robust	null	converged	575		-7.24052887708228	-7.25522243914686
+glgc_pleiotropy	robust	shared	converged	614		-7.24208541029924	-7.25647836503766
+glgc_pleiotropy	main_amu15	null	converged	215		-7.22651874688126	-7.24122542128149
+glgc_pleiotropy	main_amu15	shared	converged	317		-7.23322952506125	-7.24545502835991

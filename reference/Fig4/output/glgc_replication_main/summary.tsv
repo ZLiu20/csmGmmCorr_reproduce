@@ -1,0 +1,3 @@
+analysis	variant	target	K	t	q	n_fit	n_test	converged	selected_start	iterations	loglik	fit_minutes	R_raw	R_adj	R_both	frac_raw	cutoff_raw	avg_lfdr_raw	loci_raw	loci_adj	n_adjusted_up	incon_score_raw	incon_score_adj	incon_dec_raw	incon_dec_adj	extrap_flags	minutes_inference
+replication	main	replication	6	1	0.1	258705	4215027	TRUE	null	2483	-9.08429697082927	44.42	13112	9091	8441	0.00311077485387401	0.210883300781758	0.099993213849999	308	266	3760348	1156	0	3137	0	0	3.08
+replication	main	replication	6	2	0.1	258705	4215027	TRUE	null	2483	-9.08429697082927	44.42	11577	8420	7929	0.00274660162319245	0.230256166280121	0.0999972973464354	259	218	1936326	1167	0	2957	5	0	4.64

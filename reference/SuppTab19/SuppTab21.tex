@@ -1,0 +1,51 @@
+{\footnotesize
+\begin{longtable}{lll rrrr}
+\caption{Fitted correlation matrix (estimated $\bSigma$, $a_\mu=0.5$) and correlations of the fitting statistics: Pearson, Pearson among features with all $|z|<2$, and the robust estimate used for the fit with fixed $\bSigma$ (Section~\ref{sec:realdata-fits}).}\label{tab:realdata-sigma}\\
+\toprule
+Target & Statistic 1 & Statistic 2 & Fitted & Pearson & $|z|<2$ & Robust\\
+\midrule
+\endfirsthead
+\toprule
+Target & Statistic 1 & Statistic 2 & Fitted & Pearson & $|z|<2$ & Robust\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Pleiotropy (UKB) & BMI & SBP & 0.245 & 0.189 & 0.115 & 0.191\\
+ & BMI & TG & 0.438 & 0.318 & 0.214 & 0.369\\
+ & BMI & HDL & -0.488 & -0.386 & -0.245 & -0.408\\
+ & BMI & HbA1c & 0.324 & 0.246 & 0.142 & 0.252\\
+ & SBP & TG & 0.145 & 0.125 & 0.065 & 0.124\\
+ & SBP & HDL & -0.032 & -0.069 & 0.025 & -0.026\\
+ & SBP & HbA1c & 0.083 & 0.081 & 0.023 & 0.070\\
+ & TG & HDL & -0.558 & -0.513 & -0.352 & -0.532\\
+ & TG & HbA1c & 0.257 & 0.193 & 0.122 & 0.241\\
+ & HDL & HbA1c & -0.211 & -0.149 & -0.092 & -0.208\\
+\midrule
+Replication (GLGC) & EUR F & EUR M & 0.439 & 0.535 & 0.155 & 0.270\\
+ & EUR F & EAS F & 0.076 & 0.119 & 0.022 & 0.051\\
+ & EUR F & EAS M & 0.050 & 0.087 & 0.009 & 0.031\\
+ & EUR F & AFR F & 0.048 & 0.078 & 0.012 & 0.030\\
+ & EUR F & AFR M & 0.068 & 0.103 & 0.018 & 0.036\\
+ & EUR M & EAS F & 0.075 & 0.118 & 0.024 & 0.051\\
+ & EUR M & EAS M & 0.066 & 0.102 & 0.017 & 0.037\\
+ & EUR M & AFR F & 0.053 & 0.081 & 0.018 & 0.033\\
+ & EUR M & AFR M & 0.070 & 0.104 & 0.020 & 0.043\\
+ & EAS F & EAS M & 0.065 & 0.083 & 0.028 & 0.054\\
+ & EAS F & AFR F & 0.017 & 0.029 & 0.005 & 0.017\\
+ & EAS F & AFR M & 0.027 & 0.042 & 0.014 & 0.030\\
+ & EAS M & AFR F & 0.012 & 0.020 & 0.000 & 0.011\\
+ & EAS M & AFR M & 0.016 & 0.028 & -0.001 & 0.012\\
+ & AFR F & AFR M & 0.085 & 0.102 & 0.042 & 0.075\\
+\midrule
+Pleiotropy (GLGC lipids) & HDL & LDL & -0.038 & 0.040 & -0.006 & -0.020\\
+ & HDL & TC & 0.188 & 0.223 & 0.204 & 0.154\\
+ & HDL & log TG & -0.495 & -0.556 & -0.402 & -0.561\\
+ & HDL & non-HDL & -0.177 & -0.129 & -0.101 & -0.165\\
+ & LDL & TC & 0.833 & 0.908 & 0.802 & 0.878\\
+ & LDL & log TG & 0.188 & 0.259 & 0.114 & 0.247\\
+ & LDL & non-HDL & 0.716 & 0.853 & 0.639 & 0.778\\
+ & TC & log TG & 0.317 & 0.320 & 0.243 & 0.311\\
+ & TC & non-HDL & 0.737 & 0.845 & 0.674 & 0.785\\
+ & log TG & non-HDL & 0.424 & 0.486 & 0.300 & 0.447\\
+\end{longtable}}

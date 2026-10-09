@@ -1,0 +1,29 @@
+\begin{table}[!htbp]
+\centering
+\caption{Mean FDP at $q=0.10$ and $t=2$ under alternative estimators and data-generating processes, averaged over the first and fifth effect-size designs and one signal-proportion design of each target ($\tau_1=0.02$ for pleiotropy and replication, $0.04$ for mediation); the last block uses the fifth effect-size design with $\rho=0.8$. Replicates: 500 (first row), 200 (estimation rows and $\rho=0.8$; 50 for the fixed null correlation), 100 (independent test set and other data-generating rows; 200 for symmetric statistics). Power is in Table~\ref{tab:sources-power}.}\label{tab:sources-t2}
+\small
+\begin{tabular}{l cc cc cc}
+\toprule
+ & \multicolumn{2}{c}{Pleiotropy} & \multicolumn{2}{c}{Replication} & \multicolumn{2}{c}{Mediation}\\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+ & $K=4$ & $K=6$ & $K=4$ & $K=6$ & $K=4$ & $K=6$\\
+\midrule
+Correlated csmGmm (penalized) & 0.104 & 0.122 & 0.112 & 0.129 & 0.089 & 0.111\\
+\multicolumn{7}{l}{\textit{Estimation}}\\
+\quad Correlated csmGmm, maximum likelihood & 0.133 & 0.270 & 0.133 & 0.279 & 0.125 & 0.333\\
+\quad csmGmm ($\bSigma=I$), maximum likelihood & 0.140 & 0.280 & 0.150 & 0.307 & 0.159 & 0.358\\
+\quad csmGmm, $\bSigma$ fixed at sample correlation & 0.132 & 0.269 & 0.135 & 0.281 & 0.127 & 0.321\\
+\quad csmGmm ($\bSigma=I$), penalized & 0.113 & 0.129 & 0.122 & 0.140 & 0.122 & 0.191\\
+\quad Correlated csmGmm, independent test set & 0.098 & 0.108 & 0.107 & 0.109 & 0.083 & 0.098\\
+\multicolumn{7}{l}{\textit{Data-generating process}}\\
+\quad Symmetric statistics (intercept 0) & 0.103 & 0.112 & 0.103 & 0.106 & 0.083 & 0.098\\
+\quad Quantitative outcomes & 0.102 & 0.120 & 0.093 & 0.096 & 0.085 & 0.109\\
+\quad Exchangeable correlation 0.4 & 0.105 & 0.114 & 0.121 & 0.114 & 0.092 & 0.128\\
+\quad Linkage disequilibrium (variant level) & 0.173 & 0.258 & 0.180 & 0.225 & 0.089 & 0.114\\
+\multicolumn{7}{l}{\textit{Strong correlation ($\rho=0.8$, fifth effect-size design)}}\\
+\quad Correlated csmGmm & 0.093 & 0.090 & 0.108 & 0.107 & 0.123 & 0.299\\
+\quad Correlated csmGmm, $\bSigma$ fixed at null correlation & -- & -- & -- & -- & 0.122 & 0.320\\
+\quad csmGmm ($\bSigma=I$), maximum likelihood & 0.670 & 0.869 & 0.595 & 0.907 & 0.492 & 0.576\\
+\bottomrule
+\end{tabular}
+\end{table}
