@@ -1,4 +1,19 @@
 # MediationTest (minimax test, package mediation.test): mediation.
+# Conservative p-value of the minimax test (Miles and Chambaz), as in mediation.test with
+# sample_size = Inf: p = 2 (1 - Phi(m)) / (K + 1) + 2 (Phi(M) - Phi(m)) H_K, m = min |t|, M = max |t|,
+# K = floor((1 - Phi(M)) / (Phi(M) - Phi(m))), H_K the K-th harmonic number. The package builds
+# the vector 1:max(K), which fails (NA/NaN) when |t1| = |t2| (e.g. statistics capped at the same
+# value) and is very large when they are nearly equal; here H_K = digamma(K + 1) + Euler's constant
+# and upper tails are computed directly, which gives the same values otherwise.
+minimax_pval_R1 <- function(t) {
+  a <- abs(t); M <- pmax(a[, 1], a[, 2]); m <- pmin(a[, 1], a[, 2])
+  uM <- stats::pnorm(M, lower.tail = FALSE); um <- stats::pnorm(m, lower.tail = FALSE)
+  d <- um - uM
+  K <- ifelse(d > 0, floor(uM / d), Inf)
+  K <- pmin(K, 1e12)
+  H <- digamma(K + 1) - digamma(1)
+  pmin(1, 2 * um / (K + 1) + 2 * d * H)
+}
 run_mediation_test_R1 <- function(z, t_value, q_value) {
   if (!requireNamespace("mediation.test", quietly = TRUE)) {
     stop("The mediation.test package is required for the MediationTest comparator.")
@@ -13,9 +28,9 @@ run_mediation_test_R1 <- function(z, t_value, q_value) {
       alpha = q_value,
       truncation = 0,
       sample_size = Inf,
-      compute_pvals = TRUE
+      compute_pvals = FALSE
     )
-    pair_p[, j] <- clamp_probability_R1(fit$pvals)
+    pair_p[, j] <- clamp_probability_R1(minimax_pval_R1(z[, pair_mat[j, ], drop = FALSE]))
   }
   combined <- combine_mediation_target_pvalues_R1(z, pair_p, t_value)
   global_p <- combined$global
