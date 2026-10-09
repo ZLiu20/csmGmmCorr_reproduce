@@ -1,0 +1,13 @@
+#BSUB -J prep_medldl_cond
+#BSUB -W 4:00
+#BSUB -o Data/errDir/prep_medldl_cond.out
+#BSUB -e Data/errDir/prep_medldl_cond.err
+#BSUB -q medium
+#BSUB -n 1
+#BSUB -R "span[hosts=1] rusage[mem=32]"
+#BSUB -M 32
+
+# run 1   Conditional alpha (Data/prepare_mediation_ldl_cond.R), after Data/prepare_mediation_ldl.R.
+# Set BFILE to the 1000 Genomes EUR PLINK fileset (build 37) and PLINK to the plink 1.9 binary.
+module load R/4.5.1
+Rscript Data/prepare_mediation_ldl_cond.R "$BFILE" "${PLINK:-plink}"

@@ -29,6 +29,7 @@ loci_of <- function(chr, pos, score, win = 5e5) {
   }
   id
 }
+if (as.integer(arg) > length(dirs)) quit(save = "no")
 v <- dirs[as.integer(arg)]; name <- basename(v)
 set <- sub("_(main|indep|robust)(_amu[0-9]+)?$", "", name)
 d <- freadgz(here::here("Data", "mediation", sprintf("mediation_ldl_liver_%s.tsv.gz", sub("_dedup$", "", set))))

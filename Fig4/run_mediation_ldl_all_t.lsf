@@ -1,4 +1,4 @@
-#BSUB -J medldl_t[1-17]
+#BSUB -J medldl_t[1-30]
 #BSUB -W 4:00
 #BSUB -o Fig4/errDir/medldl_t_%I.out
 #BSUB -e Fig4/errDir/medldl_t_%I.err
@@ -7,7 +7,7 @@
 #BSUB -R "span[hosts=1] rusage[mem=16]"
 #BSUB -M 16
 
-# run 1-17   (one task per fit folder in Fig4/output/mediation_ldl, sorted; t = 1, ..., 5)
+# run 1-30   (one task per fit folder; tasks beyond the number of folders exit in Fig4/output/mediation_ldl, sorted; t = 1, ..., 5)
 module load R/4.5.1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 Rscript Fig4/mediation_ldl_all_t.R $LSB_JOBINDEX

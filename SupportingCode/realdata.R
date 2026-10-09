@@ -328,11 +328,13 @@ run_mediation_cis <- function(variant, a_mu = 0.5, out_root = here::here("Fig4",
 # null equals the pleiotropy null). Data/prepare_mediation_ldl.R. Data sets: "noshare" (primary;
 # the gene models share no variant), "nearest" (sensitivity) and "noshare_dedup" (one variant per
 # gene triple: the variant at the median position among the variants of that triple, so that
-# each S-PrediXcan statistic enters once per triple; chosen from positions only).
+# each S-PrediXcan statistic enters once per triple; chosen from positions only) and "noshare_cond"
+# (alpha conditional on the lead eQTL variant of each gene; Data/prepare_mediation_ldl_cond.R).
 MEDLDL_COLS <- c("alpha1", "beta1", "alpha2", "beta2", "alpha3", "beta3")
 MEDLDL_JOBS <- rbind(expand.grid(set = "noshare", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
                      expand.grid(set = "nearest", variant = "main", a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
-                     expand.grid(set = "noshare_dedup", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE))
+                     expand.grid(set = "noshare_dedup", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE),
+                     expand.grid(set = "noshare_cond", variant = c("main", "indep", "robust"), a_mu = c(0.5, 1.5), stringsAsFactors = FALSE))
 # one variant per gene triple (the triple as an unordered set of genes)
 medldl_dedup <- function(d) {
   key <- apply(d[, .(gene1, gene2, gene3)], 1, function(g) paste(sort(g), collapse = ","))
@@ -345,7 +347,7 @@ medldl_dedup <- function(d) {
 run_mediation_ldl <- function(set, variant, a_mu = 0.5, out_root = here::here("Fig4", "output", "mediation_ldl"),
                               cores = as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "4")), q = 0.1, cap = 12, ts = 1:2) {
   suppressMessages({ library(data.table); library(csmGmmCorr) })
-  stopifnot(set %in% c("noshare", "nearest", "noshare_dedup"), variant %in% c("main", "indep", "robust"))
+  stopifnot(set %in% c("noshare", "nearest", "noshare_dedup", "noshare_cond"), variant %in% c("main", "indep", "robust"))
   cols <- MEDLDL_COLS; gcols <- c("gene1", "gene2", "gene3")
   d <- freadgz(here::here("Data", "mediation", sprintf("mediation_ldl_liver_%s.tsv.gz", sub("_dedup$", "", set))))
   if (grepl("_dedup$", set)) d <- medldl_dedup(d)
