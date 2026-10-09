@@ -1,8 +1,11 @@
 # One-time setup (run from the repository root, e.g. on the login node of the cluster):
 #   Rscript setup.R                      # install packages, compile the kernels, run checks
 #   Rscript setup.R /path/to/csmGmmCorr  # install csmGmmCorr from a local copy instead of GitHub
+#                                        # (a source folder or csmGmmCorr_1.3.0.tar.gz; the
+#                                        # environment variable CSMGMMCORR_SRC does the same)
 # Packages are installed into the first library of .libPaths() (set R_LIBS_USER to choose it).
 args <- commandArgs(trailingOnly = TRUE)
+if (!length(args) && nzchar(Sys.getenv("CSMGMMCORR_SRC"))) args <- Sys.getenv("CSMGMMCORR_SRC")
 repos <- "https://cloud.r-project.org"
 lib <- .libPaths()[1]
 cran <- c("here", "data.table", "ggplot2", "cowplot", "remotes",
@@ -16,8 +19,13 @@ if (!requireNamespace("mediation.test", quietly = TRUE))
 if (length(args)) {
   install.packages(args[1], lib = lib, repos = NULL, type = "source")
 } else if (!requireNamespace("csmGmmCorr", quietly = TRUE) || utils::packageVersion("csmGmmCorr") < "1.3.0") {
-  remotes::install_github(Sys.getenv("CSMGMMCORR_REPO", "zliu20/csmGmmCorr"), lib = lib, upgrade = "never")
+  repo <- Sys.getenv("CSMGMMCORR_REPO", "zliu20/csmGmmCorr")
+  ok <- tryCatch({ remotes::install_github(repo, lib = lib, upgrade = "never"); TRUE }, error = function(e) { message(conditionMessage(e)); FALSE })
+  if (!ok) stop("csmGmmCorr 1.3.0 could not be installed from GitHub (", repo, "). Install it from a local copy:\n",
+                "  Rscript setup.R /path/to/csmGmmCorr_1.3.0.tar.gz   (or set CSMGMMCORR_SRC)")
 }
+if (utils::packageVersion("csmGmmCorr") != "1.3.0")
+  warning("csmGmmCorr ", utils::packageVersion("csmGmmCorr"), " is installed; the results of the paper were made with 1.3.0")
 if (!requireNamespace("csmGmm", quietly = TRUE))                  # Sun et al.'s package, for Validation/
   tryCatch(remotes::install_github("ryanrsun/csmGmm", lib = lib, upgrade = "never"),
            error = function(e) message("csmGmm not installed (only Validation/ needs it): ", conditionMessage(e)))

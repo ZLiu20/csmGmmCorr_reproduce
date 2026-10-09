@@ -46,7 +46,8 @@ MISSING. It also compares the R and package versions with `reference/versions.tx
   ```
 
   This installs csmGmmCorr (from GitHub, repository `zliu20/csmGmmCorr` unless `CSMGMMCORR_REPO` is set, or from a local copy with
-  `Rscript setup.R /path/to/csmGmmCorr`) and the packages of the comparison methods. It also
+  `Rscript setup.R /path/to/csmGmmCorr_1.3.0.tar.gz`, or `CSMGMMCORR_SRC=<that path>`) and the
+  packages of the comparison methods. It also
   compiles two small kernels in `SupportingCode/src` and checks them against the package.
 - The code is written for a cluster with the LSF scheduler.
 - There is one folder per figure or table. When a figure or table has no folder of its own,

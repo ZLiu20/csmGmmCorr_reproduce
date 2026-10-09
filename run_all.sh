@@ -28,7 +28,8 @@
 #   bash run_all.sh make        run make_all.sh and tests/verify.R here (interactive)
 #   DRYRUN=1 bash run_all.sh    show what would be submitted (no jobs, no downloads)
 # Environment: QUEUE (default medium) for the jobs submitted here; SKIP_DOWNLOAD=1 if Data/raw is
-# already complete (for example a symbolic link to an earlier download).
+# already complete (for example a symbolic link to an earlier download); CSMGMMCORR_SRC=<path to
+# csmGmmCorr_1.3.0.tar.gz or its source folder> to install the package from a local copy.
 set -u
 cd "$(dirname "$0")"
 mkdir -p logs
