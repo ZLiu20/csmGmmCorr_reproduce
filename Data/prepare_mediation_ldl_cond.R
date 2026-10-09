@@ -135,7 +135,7 @@ chk <- rbindlist(lapply(1:3, function(g) D[get(paste0("alpha", g, "_how")) == "c
 cc <- if (nrow(chk) > 10) cor(chk$zm, chk$pred) else NA
 say("alignment check: cor(marginal z, r * z_lead) = %.3f over %d values", cc, nrow(chk))
 if (is.na(cc) || cc < 0.3) stop("allele alignment check failed")
-print(rbindlist(lapply(1:3, function(g) D[, .N, by = .(alpha = g, how = get(paste0("alpha", g, "_how")))])))
+print(rbindlist(lapply(1:3, function(g) D[, .N, by = .(how = get(paste0("alpha", g, "_how")))][, alpha := g][])))
 D <- D[stats::complete.cases(D[, .(alpha1, alpha2, alpha3)])]
 fwrite(D, file.path(root, "mediation", "mediation_ldl_liver_noshare_cond.tsv.gz"), sep = "\t")
 Zm <- as.matrix(D[, .(alpha1_marg, alpha2_marg, alpha3_marg)]); Zc <- as.matrix(D[, .(alpha1, alpha2, alpha3)])
