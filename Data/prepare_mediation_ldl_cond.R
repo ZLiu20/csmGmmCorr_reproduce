@@ -11,16 +11,19 @@
 # beta (S-PrediXcan) is unchanged.
 # Input: Data/mediation/mediation_ldl_liver_noshare.tsv.gz and Data/prepared/mediation_ldl/liver_pairs/
 # (Data/prepare_mediation_ldl.R), the GTEx v8 lookup table (build-37 positions), and a PLINK 1.9
-# binary fileset of the 1000 Genomes EUR samples on build 37.
-#   Rscript Data/prepare_mediation_ldl_cond.R <1000G EUR bfile prefix> [plink binary]
+# binary fileset of the 1000 Genomes EUR samples on build 37, or the folder of the 1000 Genomes
+# phase-3 VCFs (Data/download_1000g.sh); from the VCFs, the EUR samples and the needed biallelic
+# SNVs are extracted with bcftools and converted with plink.
+#   Rscript Data/prepare_mediation_ldl_cond.R <bfile prefix | 1000G VCF folder> [plink binary] [bcftools binary]
 # Output: Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz (alpha1-3 conditional; the
 # marginal values in alpha1_marg-alpha3_marg; how each alpha was obtained in alpha1_how-alpha3_how).
 here::i_am("Data/prepare_mediation_ldl_cond.R")
 suppressMessages(library(data.table))
 say <- function(...) { cat(format(Sys.time(), "%H:%M:%S"), sprintf(...), "\n"); flush.console() }
 a <- commandArgs(trailingOnly = TRUE)
-bfile <- a[1]; plink <- if (length(a) >= 2) a[2] else "plink"
-if (!file.exists(paste0(bfile, ".bim"))) stop("PLINK fileset not found: ", bfile)
+bfile <- a[1]; plink <- if (length(a) >= 2) a[2] else "plink"; bcftools <- if (length(a) >= 3) a[3] else "bcftools"
+vcfdir <- if (dir.exists(bfile)) bfile else NA_character_
+if (is.na(vcfdir) && !file.exists(paste0(bfile, ".bim"))) stop("PLINK fileset or VCF folder not found: ", bfile)
 R2_PROXY <- 0.8
 zcat <- function(f) paste("gzip -cd", shQuote(f))
 root <- Sys.getenv("MEDLDL_OUT", here::here("Data"))
@@ -48,6 +51,31 @@ look <- look[v %chin% vars & !is.na(variant_id_b37) & nzchar(variant_id_b37)]
 look[, c("c37", "p37", "r37", "a37") := tstrsplit(variant_id_b37, "_", keep = 1:4)]
 look <- look[!(v %chin% v[duplicated(v)])]
 say("variants: %d, with a build-37 position: %d", length(vars), nrow(look))
+
+# ---- 2b. from 1000 Genomes VCFs: EUR samples, needed biallelic SNVs, PLINK fileset ------------
+if (!is.na(vcfdir)) {
+  ref <- file.path(cdir, "g1000_eur_needed")
+  if (!file.exists(paste0(ref, ".bim"))) {
+    panel <- fread(file.path(vcfdir, "integrated_call_samples_v3.20130502.ALL.panel"))
+    eur <- file.path(cdir, "eur_samples.txt"); writeLines(panel[super_pop == "EUR", sample], eur)
+    reg <- unique(look[, .(chr = as.integer(c37), pos = as.integer(p37))])[!is.na(chr)][order(chr, pos)]
+    parts <- character(0)
+    for (k in 1:22) {
+      vcf <- file.path(vcfdir, sprintf("ALL.chr%d.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz", k))
+      if (!file.exists(vcf)) stop("missing ", vcf)
+      rk <- file.path(cdir, sprintf("regions_chr%d.txt", k)); fwrite(reg[chr == k], rk, sep = "\t", col.names = FALSE)
+      out <- file.path(cdir, sprintf("eur_chr%d.vcf.gz", k))
+      st <- system2(bcftools, c("view", "-R", rk, "-S", eur, "--force-samples", "-v", "snps", "-m2", "-M2", "-Oz", "-o", out, vcf))
+      if (st != 0) stop("bcftools view failed for chr", k)
+      parts <- c(parts, out); say("chr%d: extracted", k)
+    }
+    allv <- file.path(cdir, "eur_all.vcf.gz")
+    if (system2(bcftools, c("concat", "-Oz", "-o", allv, parts)) != 0) stop("bcftools concat failed")
+    st <- system2(plink, c("--vcf", allv, "--double-id", "--set-missing-var-ids", "@:#", "--make-bed", "--out", ref))
+    if (st != 0) stop("plink --vcf failed")
+  }
+  bfile <- ref
+}
 
 # ---- 3. subset of the reference, variant IDs = GTEx IDs, allele signs --------------------------
 bim <- fread(paste0(bfile, ".bim"), header = FALSE, col.names = c("chr", "id", "cm", "pos", "a1", "a2"),

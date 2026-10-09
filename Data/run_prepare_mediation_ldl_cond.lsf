@@ -1,5 +1,5 @@
 #BSUB -J prep_medldl_cond
-#BSUB -W 4:00
+#BSUB -W 8:00
 #BSUB -o Data/errDir/prep_medldl_cond.out
 #BSUB -e Data/errDir/prep_medldl_cond.err
 #BSUB -q medium
@@ -7,7 +7,8 @@
 #BSUB -R "span[hosts=1] rusage[mem=32]"
 #BSUB -M 32
 
-# run 1   Conditional alpha (Data/prepare_mediation_ldl_cond.R), after Data/prepare_mediation_ldl.R.
-# Set BFILE to the 1000 Genomes EUR PLINK fileset (build 37) and PLINK to the plink 1.9 binary.
-module load R/4.5.1
-Rscript Data/prepare_mediation_ldl_cond.R "$BFILE" "${PLINK:-plink}"
+# run 1   Conditional alpha (Data/prepare_mediation_ldl_cond.R), after Data/prepare_mediation_ldl.R
+# and bash Data/download_1000g.sh. REF: the 1000 Genomes VCF folder (default Data/raw/g1000) or a
+# PLINK fileset prefix of the 1000 Genomes EUR samples.
+module load R/4.5.1 plink/1.90-beta bcftools/1.22.1
+Rscript Data/prepare_mediation_ldl_cond.R "${REF:-Data/raw/g1000}" plink bcftools
