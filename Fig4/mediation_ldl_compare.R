@@ -54,7 +54,10 @@ for (t in 1:2) {
   for (m in names(rej)) top[, (m) := rej[[m]][lead]]
   top[, numRej := rowSums(as.matrix(top[, names(rej), with = FALSE]))]
   fwrite(top, file.path(out, sprintf("top_loci_t%d.tsv", t)), sep = "\t")
-  short <- c("CcsmGmm3", "csmGmmI3", "CcsmGmm05", "csmGmmI05", "DEI", "MedTest", "JSPC")[seq_along(rej)]
+  SHORT <- c("Correlated csmGmm (a_mu 3)" = "CcsmGmm3", "csmGmm, Sigma = I (a_mu 3)" = "csmGmmI3",
+             "Correlated csmGmm (a_mu 0.5)" = "CcsmGmm05", "csmGmm, Sigma = I (a_mu 0.5)" = "csmGmmI05",
+             DEI = "DEI", MediationTest = "MedTest", "JS-PC" = "JSPC")
+  short <- unname(SHORT[names(rej)])        # labels follow the methods that ran (a failed comparator is absent)
   pr <- copy(top); setnames(pr, names(rej), short)
   for (s in short) pr[, (s) := fifelse(get(s), "x", "")]
   cat(sprintf("\nt = %d: top 30 loci of the correlated csmGmm (a_mu = 3); x = lead variant rejected\n", t))
