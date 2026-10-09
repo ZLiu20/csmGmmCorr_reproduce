@@ -77,8 +77,13 @@ male). The HIS and SAS strata are used only for the held-out validation
 bash Data/download_mediation_ldl.sh            # about 4 GB, to Data/raw/mediation_ldl/
 Rscript tests/test_prepare_mediation_ldl.R     # seconds; synthetic check of the preparation
 bsub < Data/run_prepare_mediation_ldl.lsf      # set RAW_GLGC if the GLGC files are not in Data/raw/glgc
-bsub < Fig4/run_mediation_ldl.lsf              # 8 fits
+bash Data/download_1000g.sh                    # 1000 Genomes phase 3 (EUR reference for conditional alpha)
+bsub < Data/run_prepare_mediation_ldl_cond.lsf # conditional alpha (sensitivity analysis)
+bsub < Fig4/run_mediation_ldl.lsf              # 20 fits
+bsub < Fig4/run_mediation_ldl_all_t.lsf        # t = 1, ..., 5 from the saved fits
+bsub < Fig4/run_mediation_ldl_compare.lsf      # csmGmm (Sigma = I), DEI, MediationTest, JS-PC
 Rscript Fig4/summarize_mediation_ldl.R
+Rscript SuppTab24/make_supptab24_26.R          # Supplementary Tables 24-26
 ```
 
 Inputs: liver cis-eQTL statistics of all tested variant-gene pairs (GTEx v10, eQTL Catalogue dataset
@@ -92,4 +97,5 @@ EUR LDL results (female and male, from `download_data.sh`). The design is descri
 - alpha = liver eQTL z of the variant for each gene; beta = S-PrediXcan z of each gene for LDL.
 
 Output: `Data/mediation/ldl_twas_liver.tsv.gz` and
-`Data/mediation/mediation_ldl_liver_{noshare,nearest}.tsv.gz`.
+`Data/mediation/mediation_ldl_liver_{noshare,nearest}.tsv.gz`; with the conditional preparation,
+`Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz`.

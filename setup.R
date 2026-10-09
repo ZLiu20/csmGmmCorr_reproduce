@@ -16,7 +16,7 @@ if (!requireNamespace("mediation.test", quietly = TRUE))
 if (length(args)) {
   install.packages(args[1], lib = lib, repos = NULL, type = "source")
 } else if (!requireNamespace("csmGmmCorr", quietly = TRUE) || utils::packageVersion("csmGmmCorr") < "1.3.0") {
-  remotes::install_github("zliu20/csmGmmCorr", lib = lib, upgrade = "never")   # adjust the user name if needed
+  remotes::install_github(Sys.getenv("CSMGMMCORR_REPO", "zliu20/csmGmmCorr"), lib = lib, upgrade = "never")
 }
 # compiled kernels
 src <- file.path("SupportingCode", "src")

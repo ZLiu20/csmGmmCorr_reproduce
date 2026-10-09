@@ -18,7 +18,7 @@ repository. This repository holds only the code that uses the package. It follow
   Rscript setup.R
   ```
 
-  This installs csmGmmCorr (from GitHub, or from a local copy with
+  This installs csmGmmCorr (from GitHub, repository `zliu20/csmGmmCorr` unless `CSMGMMCORR_REPO` is set, or from a local copy with
   `Rscript setup.R /path/to/csmGmmCorr`) and the packages of the comparison methods. It also
   compiles two small kernels in `SupportingCode/src` and checks them against the package.
 - The code is written for a cluster with the LSF scheduler.
@@ -63,6 +63,7 @@ repository. This repository holds only the code that uses the package. It follow
 | Figure 3 | Fig3 | 9 arrays (2,400 tasks): correlation study, penalized and ML fits, csmGmm | plot_fig3.R |
 | Table 2 | Tab2 | 16 arrays (2,440 tasks): csmGmm comparison, quantitative outcomes, exchangeable correlation, linkage disequilibrium, independent test set, null-correlation oracle; uses Fig2 and Fig3 | make_tab2.R |
 | Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/` | make_tab3.R, plot_fig4.R, plot_fig5.R, holdout_validation.R |
+| Mediation application (Supplementary Section 8.7) | Fig4 | `run_mediation_ldl.lsf` (20 fits), `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`; requires `Data/` (LDL mediation) | summarize_mediation_ldl.R, diagnose_mediation_ldl.R |
 | Supplementary Figures 1-12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
 | Supplementary Table 1 | none | roadmap, text only | |
 | Supplementary Table 2 | SuppTab2 | none (exact counts) | make_supptab2.R |

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test of the repository on the cluster (authors' check before release). Run from the
 # repository root:
-#   bash tests/test_all.sh local     syntax check, setup, link the original results, and run every
+#   bash tests/test_all.sh local     syntax check, setup, and run every
 #                                    plot_* / make_* script (login node; about 30-60 minutes)
 #   bash tests/test_all.sh submit    LSF smoke jobs: task 1 of every simulation array with
 #                                    SIM_N = 2000 and one replicate; real-data fit on chromosome 22;
@@ -14,12 +14,13 @@ case $mode in
 local)
   Rscript tests/check_syntax.R || exit 1
   ls SupportingCode/src/reprokernels.* >/dev/null 2>&1 || { Rscript setup.R ${CSMGMMCORR_SRC:-} 2>&1 | tee tests/setup.log | tail -15; }
-  bash tests/link_existing_results.sh | tee tests/link.log
+  # results of the full runs must be in the folder layout of this repository (or linked into it)
   mkdir -p tests/logs
   for s in Fig1/plot_fig1.R Fig2/plot_fig2.R SuppFig1/plot_suppfig1_12.R Tab1/make_tab1.R Fig3/plot_fig3.R Tab2/make_tab2.R \
            SuppTab2/make_supptab2.R SuppTab3/make_supptab3.R SuppTab5/make_supptab5.R SuppTab6/make_supptab6_8.R \
            SuppTab9/make_supptab9.R SuppTab10/make_supptab10_11.R SuppTab12/make_supptab12_15.R SuppTab16/make_supptab16_18.R \
-           Fig4/make_tab3.R Fig4/plot_fig4.R Fig4/plot_fig5.R Fig4/holdout_validation.R SuppTab19/make_supptab19_23.R; do
+           Fig4/make_tab3.R Fig4/plot_fig4.R Fig4/plot_fig5.R Fig4/holdout_validation.R SuppTab19/make_supptab19_23.R \
+           SuppTab24/make_supptab24_26.R; do
     log=tests/logs/$(basename $s .R).log
     if Rscript $s > $log 2>&1; then echo "OK      $s"; else echo "FAILED  $s   (see $log)"; tail -5 $log; fi
   done
@@ -40,12 +41,7 @@ Rscript Fig4/realdata_fit.R 1
 JOB
   bsub < SuppTab4/run_SuppTab4.lsf
   # folder that holds replication/GLGC_LDL_sex_ancestry/ with all ten strata
-  RAW=${RAW_GLGC:-}
-  if [ -z "$RAW" ]; then
-    for f in $(find /rsrch8/home/biostatistics/zliu20 -maxdepth 8 -type d -name GLGC_LDL_sex_ancestry 2>/dev/null); do
-      [ $(ls $f/LDL_INV_*.meta.singlevar.results.gz 2>/dev/null | wc -l) -eq 10 ] && { RAW=$(dirname $(dirname $f)); break; }
-    done
-  fi
+  RAW=${RAW_GLGC:?set RAW_GLGC to the folder that holds replication/GLGC_LDL_sex_ancestry/}
   echo "raw GLGC folder: $RAW"
   bsub -J "glgc_prep" -q medium -n 1 -W 8:00 -M 64 -R "span[hosts=1] rusage[mem=64]" -o tests/errDir/glgc_prep.out -e tests/errDir/glgc_prep.err <<JOB
 module load R/4.5.1
