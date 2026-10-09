@@ -75,6 +75,7 @@ repository. This repository holds only the code that uses the package. It follow
 | Supplementary Tables 12-15 | SuppTab12 | 1 array (480 tasks): repfdr and directional PC; uses Fig2, Fig3, Tab2 | make_supptab12_15.R |
 | Supplementary Tables 16-18 | SuppTab16 | uses Fig2 | make_supptab16_18.R |
 | Supplementary Tables 19-23 | SuppTab19 | uses Fig4 | make_supptab19_23.R |
+| Supplementary Tables 24-26 | SuppTab24 | uses Fig4 LDL mediation (`run_mediation_ldl.lsf`, `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`) | make_supptab24_26.R |
 | Package checks (Supplementary Section 2.7) | Validation | none | validate_csmgmm.R, validate2_csmgmm.R, diag_incon.R |
 
 Upper bounds on the wall time per task (`-W`):
