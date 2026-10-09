@@ -113,12 +113,14 @@ say("lead-variant correlations: %d pairs", nrow(ld))
 
 # ---- 4. conditional alpha -----------------------------------------------------------------------
 lz <- setNames(leads$lead_z, leads$gene); lv <- setNames(leads$lead, leads$gene)
-cond_alpha <- function(variant, gene, z) {
+cond_alpha <- function(vv, gene, z) {
+  # (argument names differ from the columns of ld: data.table looks up names in i among its columns)
   cl <- unname(lv[gene]); zc <- unname(lz[gene])
-  r <- ld[.(cl, variant), r]
-  how <- fifelse(!is.na(cl) & variant == cl, "lead", fifelse(is.na(r), "no_ld", fifelse(r^2 >= R2_PROXY, "proxy", "conditional")))
-  val <- fifelse(how %chin% c("lead", "proxy"), z, (z - r * zc) / sqrt(1 - r^2))
+  rr <- ld[data.table(lead = cl, variant = vv), on = c("lead", "variant"), x.r]
+  how <- fifelse(!is.na(cl) & vv == cl, "lead", fifelse(is.na(rr), "no_ld", fifelse(rr^2 >= R2_PROXY, "proxy", "conditional")))
+  val <- fifelse(how %chin% c("lead", "proxy"), z, (z - rr * zc) / sqrt(1 - rr^2))
   val[how == "no_ld"] <- NA_real_
+  r <- rr
   list(val, how, r)
 }
 for (g in 1:3) {
