@@ -6,6 +6,8 @@
 #     of ten ancestry-by-sex strata (replication; HIS and SAS are held out for validation)
 #   UK Biobank, Neale lab round 2 (http://www.nealelab.is/uk-biobank): five traits, both sexes,
 #     imputed v3, inverse-rank-normalized (irnt): BMI 21001, SBP 4080, TG 30870, HDL 30760, HbA1c 30750
+#     (the three biomarker files are served under the name *.varorder.tsv.bgz; the rows are ordered
+#     differently but the values are those of the original files, see tests/check_ukb_varorder.R)
 set -e
 cd "$(dirname "$0")"
 get() { mkdir -p "$(dirname "$2")"; [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -q --tries=10 --timeout=120 --waitretry=30 -c -O "$2.part" "$1" && mv "$2.part" "$2"; }
@@ -23,7 +25,8 @@ for s in AFR_HRC_1KGP3_others EAS_1KGP3 EUR_HRC_1KGP3_others HIS_1KGP3 SAS_HRC_1
 done
 B=https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs
 for f in 21001_irnt 4080_irnt 30870_irnt 30760_irnt 30750_irnt; do
-  get $B/$f.gwas.imputed_v3.both_sexes.tsv.bgz raw/ukb/$f.gwas.imputed_v3.both_sexes.tsv.bgz
+  v=""; case $f in 30870_irnt|30760_irnt|30750_irnt) v=".varorder";; esac   # biomarker files: only the .varorder name is still served
+  get $B/$f.gwas.imputed_v3.both_sexes$v.tsv.bgz raw/ukb/$f.gwas.imputed_v3.both_sexes.tsv.bgz
 done
 ls -lR raw | grep -E "gz|bgz" | awk '{print $5, $NF}'
 echo "DOWNLOAD DONE"
