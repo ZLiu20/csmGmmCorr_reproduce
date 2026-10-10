@@ -7,7 +7,7 @@
 #     correlation from that of the model structure and the target (t < K - 1);
 #  4. the target t = K - 1, for which Sun et al.'s ordering result applies.
 here::i_am("Validation/diag_incon.R")
-if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm", upgrade = "never")
+if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm@4a03af5", upgrade = "never")
 suppressMessages({ library(csmGmm); library(csmGmmCorr) })
 source(here::here("SupportingCode", "load_all.R"))
 log <- here::here("Validation", "diag_incon_log.txt"); cat("", file = log)

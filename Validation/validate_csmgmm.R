@@ -1,5 +1,5 @@
 # Check that the comparison methods are the estimators of Sun, McCaw and Lin's csmGmm
-# package (github ryanrsun/csmGmm, upstream HEAD):
+# package (github ryanrsun/csmGmm, version 0.5.0, commit 4a03af5):
 #   "csmGmm"     (csmGmmCorr, Sigma = I, ML, structure B)  vs  symm_fit_ind_EM   (K = 4)
 #   "csmGmm_cor" (csmGmmCorr, Sigma = plug-in R, ML)       vs  symm_fit_cor_EM   (K = 2, the
 #                case it is written for; corMat = cor(testStats) as in its example) 
@@ -7,7 +7,7 @@
 # Writes Validation/validate_csmgmm_log.txt. The target is the one csmGmm supports: all K non-null
 # (pleiotropy with t = K - 1).
 here::i_am("Validation/validate_csmgmm.R")
-if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm", upgrade = "never")
+if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm@4a03af5", upgrade = "never")
 suppressMessages({ library(csmGmm); library(csmGmmCorr) })
 source(here::here("SupportingCode", "load_all.R"))
 log <- here::here("Validation", "validate_csmgmm_log.txt"); cat("", file = log)

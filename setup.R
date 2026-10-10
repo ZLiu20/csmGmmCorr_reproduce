@@ -27,7 +27,7 @@ if (length(args)) {
 if (utils::packageVersion("csmGmmCorr") != "1.3.0")
   warning("csmGmmCorr ", utils::packageVersion("csmGmmCorr"), " is installed; the results of the paper were made with 1.3.0")
 if (!requireNamespace("csmGmm", quietly = TRUE))                  # Sun et al.'s package, for Validation/
-  tryCatch(remotes::install_github("ryanrsun/csmGmm", lib = lib, upgrade = "never"),
+  tryCatch(remotes::install_github("ryanrsun/csmGmm@4a03af5", lib = lib, upgrade = "never"),
            error = function(e) message("csmGmm not installed (only Validation/ needs it): ", conditionMessage(e)))
 # versions used (compared with reference/versions.txt by tests/verify.R)
 dir.create("logs", showWarnings = FALSE)

@@ -10,7 +10,7 @@
 #    both solutions, to see whether they differ in fit or only in poorly identified
 #    parameters of nearly empty supports (sizes 3 and 4).
 here::i_am("Validation/validate2_csmgmm.R")
-if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm", upgrade = "never")
+if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm@4a03af5", upgrade = "never")
 suppressMessages({ library(csmGmm); library(csmGmmCorr) })
 source(here::here("SupportingCode", "load_all.R"))
 ns <- asNamespace("csmGmmCorr")
