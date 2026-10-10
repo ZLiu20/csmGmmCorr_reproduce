@@ -8,7 +8,7 @@
 #     imputed v3, inverse-rank-normalized (irnt): BMI 21001, SBP 4080, TG 30870, HDL 30760, HbA1c 30750
 set -e
 cd "$(dirname "$0")"
-get() { mkdir -p "$(dirname "$2")"; [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -q -O "$2.part" "$1" && mv "$2.part" "$2"; }
+get() { mkdir -p "$(dirname "$2")"; [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -q --tries=10 --timeout=120 --waitretry=30 -c -O "$2.part" "$1" && mv "$2.part" "$2"; }
 G=https://csg.sph.umich.edu/willer/public/glgc-lipids2021/results
 for tr in HDL LDL TC logTG nonHDL; do
   f=with_BF_meta-analysis_AFR_EAS_EUR_HIS_SAS_${tr}_INV_ALL_with_N_1.gz

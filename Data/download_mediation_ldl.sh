@@ -11,7 +11,7 @@ set -e
 cd "$(dirname "$0")"
 D=raw/mediation_ldl
 mkdir -p $D
-get() { [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -nv -O "$2.part" "$1" && mv "$2.part" "$2"; }
+get() { [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -nv --tries=10 --timeout=120 --waitretry=30 -c -O "$2.part" "$1" && mv "$2.part" "$2"; }
 G=https://storage.googleapis.com/adult-gtex
 get https://ftp.ebi.ac.uk/pub/databases/spot/eQTL/sumstats/QTS000015/QTD000266/QTD000266.all.tsv.gz $D/QTD000266.all.tsv.gz
 get $G/references/v8/reference-tables/gencode.v26.GRCh38.genes.gtf $D/gencode.v26.GRCh38.genes.gtf
