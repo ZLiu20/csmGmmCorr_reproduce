@@ -14,7 +14,7 @@ repository. This repository holds only the code that uses the package. It follow
 On the cluster, in a fresh clone (login node with internet access):
 
 ```
-git clone <repository> csmGmmCorr_rerun && cd csmGmmCorr_rerun
+git clone https://github.com/ZLiu20/csmGmmCorr_reproduce.git csmGmmCorr_rerun && cd csmGmmCorr_rerun
 mkdir -p logs && nohup bash run_all.sh > logs/run_all.log 2>&1 &
 ```
 
