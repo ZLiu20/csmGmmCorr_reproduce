@@ -34,10 +34,13 @@ package versions with `reference/versions.txt`.
   the order or the nodes on which the jobs run. The fits run with several threads, and the order
   of the floating-point sums can differ between runs, so a refit can differ in the last digits of
   the parameters. A complete rerun of the paper (October 2026) gave the same rejections in 97% to
-  100% of the replicates of every simulation array, and the tables differed from the earlier run
-  by at most one unit in the third decimal for the penalized estimator. Larger changes occur
-  only for the unpenalized maximum likelihood fit, whose likelihood has several local maxima, and
-  in run-time and iteration counts. Expect CLOSE rather than IDENTICAL for most files.
+  100% of the replicates of every simulation array, and the table entries of the penalized
+  estimator differed from the earlier run by at most 0.004. Larger changes occurred for the
+  unpenalized maximum likelihood fit, whose likelihood has several local maxima, for the
+  MediationTest comparator at the largest effect sizes, whose p-value computation was made robust
+  to equal capped statistics after the earlier run, and in run-time and iteration counts. The
+  values in `reference/` are those of the complete rerun. Expect CLOSE rather than IDENTICAL for
+  most files.
 - The simulations take most of the time: about 18,000 tasks of up to 16 hours each (see the
   table of wall times below), so the total time depends mainly on how many tasks the cluster
   runs at once.
