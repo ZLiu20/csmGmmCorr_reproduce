@@ -9,7 +9,7 @@ The three scripts in this folder compare csmGmmCorr with the csmGmm package of S
 | `validate2_csmgmm.R` | A. one EM step from the same parameters; B. full fits from the same start on well-identified data (log-likelihood, lfdr, rejections); C. log-likelihood of both solutions on the sparse simulation data of `validate_csmgmm.R` | `validate2_log.txt` |
 | `diag_incon.R` | our incongruity count against `csmGmm::check_incongruous`, and the diagnostics of Supplementary Section 7.3 | `diag_incon_log.txt` |
 
-The numbers of Supplementary Sections 6 (comparison with csmGmm) and 7.3 come from
+The numbers of Supplementary Sections 6.4 (comparison with csmGmm) and 7.3 come from
 `validate2_log.txt` (parts A and B) and `diag_incon_log.txt`.
 
 ## Version of csmGmm
