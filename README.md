@@ -55,7 +55,7 @@ package versions with `reference/versions.txt`.
   Rscript setup.R
   ```
 
-  This installs csmGmmCorr (from GitHub, repository `zliu20/csmGmmCorr` unless `CSMGMMCORR_REPO` is set, or from a local copy with
+  This installs csmGmmCorr (from GitHub, repository `ZLiu20/csmGmmCorr` unless `CSMGMMCORR_REPO` is set, or from a local copy with
   `Rscript setup.R /path/to/csmGmmCorr_1.3.0.tar.gz`, or `CSMGMMCORR_SRC=<that path>`) and the
   packages of the comparison methods. It also
   compiles two small kernels in `SupportingCode/src` and checks them against the package.

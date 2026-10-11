@@ -19,7 +19,7 @@ if (!requireNamespace("mediation.test", quietly = TRUE))
 if (length(args)) {
   install.packages(args[1], lib = lib, repos = NULL, type = "source")
 } else if (!requireNamespace("csmGmmCorr", quietly = TRUE) || utils::packageVersion("csmGmmCorr") < "1.3.0") {
-  repo <- Sys.getenv("CSMGMMCORR_REPO", "zliu20/csmGmmCorr")
+  repo <- Sys.getenv("CSMGMMCORR_REPO", "ZLiu20/csmGmmCorr")
   ok <- tryCatch({ remotes::install_github(repo, lib = lib, upgrade = "never"); TRUE }, error = function(e) { message(conditionMessage(e)); FALSE })
   if (!ok) stop("csmGmmCorr 1.3.0 could not be installed from GitHub (", repo, "). Install it from a local copy:\n",
                 "  Rscript setup.R /path/to/csmGmmCorr_1.3.0.tar.gz   (or set CSMGMMCORR_SRC)")
