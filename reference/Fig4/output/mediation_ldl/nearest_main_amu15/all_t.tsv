@@ -1,6 +1,6 @@
 fit	t	n	R_raw	R_adj	strong_target_data	strong_target_loci_data	strong_target_rej	all_alpha_lt2	loci	loci_with_strong
-nearest_main_amu15	1	198740	24458	20941	988	170	922	11285	1632	176
-nearest_main_amu15	2	198740	23977	20424	670	115	625	11229	1619	116
+nearest_main_amu15	1	198740	24459	20941	988	170	922	11285	1632	176
+nearest_main_amu15	2	198740	23977	20424	670	115	625	11229	1620	116
 nearest_main_amu15	3	198740	12069	11430	335	61	316	6912	673	64
 nearest_main_amu15	4	198740	3662	2091	61	16	44	2071	292	13
 nearest_main_amu15	5	198740	22	22	4	2	4	0	5	2

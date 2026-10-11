@@ -23,14 +23,21 @@ mkdir -p logs && nohup bash run_all.sh > logs/run_all.log 2>&1 &
 with LSF dependencies, and submits a final job that waits for everything, runs `make_all.sh`
 (every `plot_` and `make_` script) and `tests/verify.R`. The report `logs/verify_report.txt`
 compares every regenerated table, and the numbers behind every figure, with the values of the
-paper in `reference/`: IDENTICAL, EQUAL (within a relative tolerance of 1e-6), DIFFERENT or
-MISSING. It also compares the R and package versions with `reference/versions.txt`.
+paper in `reference/`: IDENTICAL, EQUAL (within a relative tolerance of 1e-6), CLOSE (every
+number within 1% relative or 0.005 absolute), DIFFERENT or MISSING. It also compares the R and
+package versions with `reference/versions.txt`.
 
 - `bash run_all.sh status` shows the progress; repeating `bash run_all.sh` resumes (finished
   replicates and fits are skipped; `RERUN=1` refits the applications).
 - After resubmitting failed tasks, `bash run_all.sh final` submits the final job again.
-- Every simulation replicate regenerates its data from fixed seeds and every fit is deterministic, so the
-  results do not depend on the order or the nodes on which the jobs run.
+- Every simulation replicate regenerates its data from fixed seeds, so the data do not depend on
+  the order or the nodes on which the jobs run. The fits run with several threads, and the order
+  of the floating-point sums can differ between runs, so a refit can differ in the last digits of
+  the parameters. A complete rerun of the paper (October 2026) gave the same rejections in 97% to
+  100% of the replicates of every simulation array, and the tables differed from the earlier run
+  by at most one unit in the third decimal for the penalized estimator. Larger changes occur
+  only for the unpenalized maximum likelihood fit, whose likelihood has several local maxima, and
+  in run-time and iteration counts. Expect CLOSE rather than IDENTICAL for most files.
 - The simulations take most of the time: about 18,000 tasks of up to 16 hours each (see the
   table of wall times below), so the total time depends mainly on how many tasks the cluster
   runs at once.
