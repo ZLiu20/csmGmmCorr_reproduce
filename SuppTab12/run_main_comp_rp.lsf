@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #BSUB -J main_comp_rp[1-480]%200
 #BSUB -W 12:00
 #BSUB -o SuppTab12/errDir/main_comp_rp_%I.out
@@ -7,9 +8,7 @@
 #BSUB -R "span[hosts=1] rusage[mem=16]"
 #BSUB -M 16
 
-# run 1-480
-# Submit from the repository root:  bsub < SuppTab12/run_main_comp_rp.lsf
-# (queue, memory unit and module name may need to be adapted to the cluster)
+set -euo pipefail
 module load R/4.5.1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-Rscript SuppTab12/main_comp_rp_sim.R $LSB_JOBINDEX
+Rscript SuppTab12/main_comp_rp_sim.R "$LSB_JOBINDEX"

@@ -1,5 +1,0 @@
-Example 1: pleiotropy lfdr (t = 1) at (12,0,0,0): rho = 0.3: 0.0011; Sigma = I: 0.87
-Example 1: lfdr(12,3,0,0) = 0.0038
-Example 1: the lfdr along (z1,1.5,1.5,1.5) increases on (0.00, 0.84) and (3.48, 7.00)
-Proposition 2: replication lfdr along (z1,1.5,1.5,1.5) at z1 = 4 and 12: 0.79, 0.998
-Section 4.1: Sigma = I, lfdr along (z1,1,0,0) at z1 = 2 and 4: 0.85, 0.99

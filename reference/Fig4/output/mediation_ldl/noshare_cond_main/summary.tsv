@@ -1,3 +1,0 @@
-variant	a_mu	t	n_features	n_triples	converged	loglik	fit_minutes	null_weight	R_raw	R_adj	triples_raw	loci_raw	loci_adj	extrap_flags
-noshare_cond_main	0.5	1	174620	24828	TRUE	-10.9210449083346	7.96	0.337627751933732	24248	17862	5702	1415	1320	0
-noshare_cond_main	0.5	2	174620	24828	TRUE	-10.9210449083346	7.96	0.337627751933732	23111	17109	5463	1397	1278	0

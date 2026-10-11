@@ -1,14 +1,12 @@
-#BSUB -J realdata[1-13]
-#BSUB -W 23:00
-#BSUB -o Fig4/errDir/realdata_%I.out
-#BSUB -e Fig4/errDir/realdata_%I.err
-#BSUB -q medium
+#!/usr/bin/env bash
+#BSUB -J realdata[1-13]%3
+#BSUB -q long
+#BSUB -W 72:00
 #BSUB -n 8
-#BSUB -R "span[hosts=1] rusage[mem=64]"
 #BSUB -M 64
-
-# run 1-13   (jobs listed in Fig4/realdata_fit.R)
-# Submit from the repository root after Data/run_prepare.lsf:  bsub < Fig4/run_realdata.lsf
+#BSUB -R "rusage[mem=64]"
+#BSUB -o Fig4/errDir/realdata_%J_%I.out
+#BSUB -e Fig4/errDir/realdata_%J_%I.err
+set -euo pipefail
 module load R/4.5.1
-export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-Rscript Fig4/realdata_fit.R $LSB_JOBINDEX
+Rscript Fig4/realdata_fit.R "${LSB_JOBINDEX:?}"

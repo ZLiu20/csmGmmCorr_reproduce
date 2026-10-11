@@ -1,9 +1,6 @@
-# Fig3: correlation study (rho = 0, 0.2, ..., 0.8); pleiotropy;
-# csmGmm (Sigma = I), plug-in Sigma and penalized csmGmm.
-# Designs 1-5, K = 4 and 6, replicates 1-200; one task = 10 replicates of one
-# (design, K, t) cell, 200 tasks. Output: Fig3/output/rho/comp_pl_csm/
-#   Rscript Fig3/rho_comp_pl_csm_sim.R <task 1-200>        (or bsub < Fig3/run_rho_comp_pl_csm.lsf)
+# Simulation entry point for rho_comp_pl_csm.
 here::i_am("Fig3/rho_comp_pl_csm_sim.R")
 source(here::here("SupportingCode", "load_all.R"))
-aID <- as.integer(commandArgs(trailingOnly = TRUE)[1])
-run_sim_task("rho_comp_pl_csm", aID)
+args <- commandArgs(trailingOnly = TRUE)
+if (!length(args)) stop("An LSF task index is required")
+run_sim_task("rho_comp_pl_csm", as.integer(args[[1L]]))

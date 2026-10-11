@@ -1,394 +1,427 @@
-# Data generation for the csmGmmCorr simulation study.
-# Follows Sun, McCaw and Lin (csmGmm) and the pilot design of this study: n = 1000 subjects,
-# 10^5 SNPs in sets of 1000, MAF 0.3, logistic outcomes with intercept -1, outcomes
-# correlated through bindata::rmvbin-type latent normals with AR(1) correlation 0.2,
-# Wald statistics from logistic regression truncated at +-8.1, and methods fitted and
-# evaluated on the same data. Revised to match the paper:
-#   * configurations are drawn iid from the two-group model: support size s with
-#     probability lambda_s (s = 0..K, all positive), support uniform among the
-#     choose(K, s) sets, signs uniform (conditional symmetry);
-#   * mediation uses one common binary outcome with all mediators entering jointly.
+.simulation_grid <- list(
+  pl = list(effect = c(0.38, 0.43, 0.48, 0.53, 0.58), tau = c(0.01, 0.02, 0.03, 0.04)),
+  rp = list(effect = c(0.48, 0.54, 0.60, 0.66, 0.72), tau = c(0.01, 0.02, 0.03, 0.04)),
+  med = list(m = c(8, 10, 12, 14, 16), m_tau = 12,
+             tau = c(0.02, 0.04, 0.06, 0.08))
+)
 
-# ---- design points ----
-# Each scenario has its own grid (as in Sun, McCaw and Lin, whose pleiotropy, replication
-# and mediation figures use different effect sizes): an effect-size axis (effect_01..05)
-# and a signal-proportion axis (tau1_*, at the largest effect size). The grids were fixed
-# before the structure-B runs by one rule: the power of the methods spans roughly 0.2-0.9
-# (from pilot runs), so that no design is uninformative (power near 0 or 1).
-#   pl  (pleiotropy):  beta = 0.38, 0.43, 0.48, 0.53, 0.58;  tau1 = 0.01-0.04 at 0.58
-#   rp  (replication): beta = 0.48, 0.54, 0.60, 0.66, 0.72;  tau1 = 0.01-0.04 at 0.72
-#       (replication needs equal signs at every non-null coordinate and has lower
-#        power than pleiotropy at the same effect size)
-#   med (mediation):   alpha in [0.00, 0.18] + 0.01 m, beta in [0.14, 0.24] + 0.01 m,
-#       m = 8, 10, 12, 14, 16 (the form of Sun et al.); tau1 = 0.02-0.08 at m = 12
-# study "main": latent AR(1) correlation rho = 0.2 (as in Sun et al.), intercept b0 = -1;
-# study "rho": the effect_05 setting of each scenario with rho = 0, 0.2, ..., 0.8
-#   for the outcomes (pl, rp) and the mediator errors (med);
-# study "sym": the main pl / rp designs with intercept b0 = 0 (outcome prevalence 1/2),
-#   for which the statistics of positive and negative effects have the same distribution
-#   up to sign (with b0 = -1 positive effects give about 10-15 percent larger |z|, which
-#   the conditionally symmetric model does not allow).
-.grid <- list(
-  pl = list(effect = c(0.38, 0.43, 0.48, 0.53, 0.58), tau1 = c(0.01, 0.02, 0.03, 0.04)),
-  rp = list(effect = c(0.48, 0.54, 0.60, 0.66, 0.72), tau1 = c(0.01, 0.02, 0.03, 0.04)),
-  med = list(m = c(8, 10, 12, 14, 16), m_tau1 = 12, tau1 = c(0.02, 0.04, 0.06, 0.08)))
-# Extension of the effect-size axis to stronger signals (designs 10-12, appended so that the
-# indices and seeds of designs 1-9 are unchanged): effect_06..08.
-.grid_ext <- list(pl = c(0.63, 0.68, 0.73), rp = c(0.78, 0.84, 0.90), med = c(18, 20, 22))
+.strong_effects <- list(pl = c(0.63, 0.68, 0.73),
+                        rp = c(0.78, 0.84, 0.90),
+                        med = c(18, 20, 22))
+
 design_table <- function(study = "main", scen = "pl") {
-  if (!scen %in% names(.grid)) stop("unknown scenario: ", scen)
-  g <- .grid[[scen]]
+  if (!scen %in% names(.simulation_grid)) stop("Unknown scenario: ", scen)
+  grid <- .simulation_grid[[scen]]
+
   if (scen == "med") {
-    m <- c(g$m, rep(g$m_tau1, length(g$tau1)))
-    main <- data.frame(effect = NA_real_, x = 0.01 * m, a_min = 0.01 * m, a_max = 0.18 + 0.01 * m,
-                       b_min = 0.14 + 0.01 * m, b_max = 0.24 + 0.01 * m)
+    m <- c(grid$m, rep(grid$m_tau, length(grid$tau)))
+    core <- data.frame(
+      effect = NA_real_,
+      x = 0.01 * m,
+      a_min = 0.01 * m,
+      a_max = 0.18 + 0.01 * m,
+      b_min = 0.14 + 0.01 * m,
+      b_max = 0.24 + 0.01 * m
+    )
   } else {
-    main <- data.frame(effect = c(g$effect, rep(max(g$effect), length(g$tau1))),
-                       x = c(g$effect, rep(max(g$effect), length(g$tau1))),
-                       a_min = NA, a_max = NA, b_min = NA, b_max = NA)
+    e <- c(grid$effect, rep(max(grid$effect), length(grid$tau)))
+    core <- data.frame(effect = e, x = e, a_min = NA_real_, a_max = NA_real_,
+                       b_min = NA_real_, b_max = NA_real_)
   }
-  main <- cbind(data.frame(design = c(sprintf("effect_%02d", 1:5), sprintf("tau1_%03d", round(100 * g$tau1))),
-                           axis = c(rep("effect", 5), rep("tau1", length(g$tau1))), stringsAsFactors = FALSE),
-                main, data.frame(tau1 = c(rep(0, 5), g$tau1), rho = 0.2, b0 = -1, scen = scen, stringsAsFactors = FALSE))
-  ge <- .grid_ext[[scen]]
-  ext <- if (scen == "med") {
-    data.frame(effect = NA_real_, x = 0.01 * ge, a_min = 0.01 * ge, a_max = 0.18 + 0.01 * ge,
-               b_min = 0.14 + 0.01 * ge, b_max = 0.24 + 0.01 * ge)
-  } else data.frame(effect = ge, x = ge, a_min = NA, a_max = NA, b_min = NA, b_max = NA)
-  ext <- cbind(data.frame(design = sprintf("effect_%02d", 6:8), axis = "effect", stringsAsFactors = FALSE), ext,
-               data.frame(tau1 = 0, rho = 0.2, b0 = -1, scen = scen, stringsAsFactors = FALSE))
-  main$x[main$axis == "tau1"] <- main$tau1[main$axis == "tau1"]   # x: value on the design's axis
-  main <- rbind(main, ext[names(main)])
-  main$outcome <- "logit"; main$ld <- 0; main$corr <- "ar1"
-  if (study %in% c("main", "split")) return(main)
-  if (study == "sym") { main$b0 <- 0; return(main) }   # intercept 0: symmetric statistics (all scenarios)
-  # Robustness studies (same designs and seeds layout, different data-generating process):
-  #   quant: quantitative outcome(s), linear model with unit-variance errors and the effects
-  #          scaled by sqrt(0.197) = 0.444, which gives the noncentrality of the logistic
-  #          Wald statistic at prevalence logit^-1(-1); statistics are symmetric in sign;
-  #   ld   : genotypes within a set of 1,000 SNPs in linkage disequilibrium (latent AR(1)
-  #          correlation 0.5 between adjacent SNPs on each haplotype), so that statistics
-  #          are dependent across features;
-  #   exch : exchangeable latent correlation 0.4 between outcomes (mediator errors)
-  #          instead of AR(1) with rho = 0.2.
-  if (study == "quant") { main$outcome <- "linear"; return(main) }
-  if (study %in% c("ld", "ldloc", "ldu")) { main$ld <- 0.5; return(main) }   # ldloc: same data, locus-level FDP
-  if (study == "exch") { main$corr <- "exch"; main$rho <- 0.4; return(main) }
+
+  labels <- c(sprintf("effect_%02d", 1:5), sprintf("tau1_%03d", round(100 * grid$tau)))
+  ans <- cbind(
+    data.frame(design = labels,
+               axis = c(rep("effect", 5L), rep("tau1", length(grid$tau))),
+               stringsAsFactors = FALSE),
+    core,
+    data.frame(tau1 = c(rep(0, 5L), grid$tau), rho = 0.2, b0 = -1,
+               scen = scen, stringsAsFactors = FALSE)
+  )
+
+  stronger <- .strong_effects[[scen]]
+  if (scen == "med") {
+    extra <- data.frame(
+      effect = NA_real_, x = 0.01 * stronger,
+      a_min = 0.01 * stronger, a_max = 0.18 + 0.01 * stronger,
+      b_min = 0.14 + 0.01 * stronger, b_max = 0.24 + 0.01 * stronger
+    )
+  } else {
+    extra <- data.frame(effect = stronger, x = stronger, a_min = NA_real_, a_max = NA_real_,
+                        b_min = NA_real_, b_max = NA_real_)
+  }
+  extra <- cbind(
+    data.frame(design = sprintf("effect_%02d", 6:8), axis = "effect",
+               stringsAsFactors = FALSE),
+    extra,
+    data.frame(tau1 = 0, rho = 0.2, b0 = -1, scen = scen,
+               stringsAsFactors = FALSE)
+  )
+  ans <- rbind(ans, extra)
+  ans$x[ans$axis == "tau1"] <- ans$tau1[ans$axis == "tau1"]
+
+  ans$outcome <- "logit"
+  ans$ld <- 0
+  ans$corr <- "ar1"
+  if (study %in% c("main", "split")) return(ans)
+  if (study == "sym") {
+    ans$b0 <- 0
+    return(ans)
+  }
+  if (study == "quant") {
+    ans$outcome <- "linear"
+    return(ans)
+  }
+  if (study %in% c("ld", "ldloc", "ldu")) {
+    ans$ld <- 0.5
+    return(ans)
+  }
+  if (study == "exch") {
+    ans$corr <- "exch"
+    ans$rho <- 0.4
+    return(ans)
+  }
   if (study == "rho") {
-    rho <- c(0, 0.2, 0.4, 0.6, 0.8)
-    r <- main[rep(5L, length(rho)), ]; r$x <- rho
-    r$design <- sprintf("rho_%03d", round(100 * rho)); r$axis <- "rho"; r$rho <- rho; r$tau1 <- 0
-    rownames(r) <- NULL
-    return(r)
+    rho <- seq(0, 0.8, by = 0.2)
+    ans <- ans[rep(5L, length(rho)), , drop = FALSE]
+    ans$design <- sprintf("rho_%03d", round(100 * rho))
+    ans$axis <- "rho"
+    ans$x <- rho
+    ans$rho <- rho
+    ans$tau1 <- 0
+    rownames(ans) <- NULL
+    return(ans)
   }
-  stop("unknown study: ", study)
+  stop("Unknown simulation study: ", study)
 }
 
-# Support-size probabilities lambda_0..lambda_K (all positive). Sizes 0-4 as in the pilot design;
-# sizes 5..K continue the size-4 value with a halving tail.
 size_probs <- function(K, tau1 = 0) {
   if (tau1 > 0) {
     p11 <- 3 * tau1^2
-    head <- c(3 * tau1, 3 * p11, p11 / 2, p11 / 4)                 # sizes 1..4 (signal-proportion designs)
+    leading <- c(3 * tau1, 3 * p11, p11 / 2, p11 / 4)
   } else {
-    head <- c(0.04, 0.0012, 0.0006, 0.0003)                         # sizes 1..4 (effect-size designs)
+    leading <- c(0.04, 0.0012, 0.0006, 0.0003)
   }
-  lam <- head[seq_len(min(K, 4))]
-  if (K > 4) lam <- c(lam, head[4] * 0.5^(seq_len(K - 4)))
-  c(1 - sum(lam), lam)
+  signal <- leading[seq_len(min(K, 4L))]
+  if (K > 4L) signal <- c(signal, leading[4L] * 0.5^seq_len(K - 4L))
+  c(1 - sum(signal), signal)
 }
 
-# Fraction of size-s supports that contain at least one complete pair (2g-1, 2g).
-complete_pair_fraction <- function(K, s) {
-  G <- K / 2
-  if (s < 2) return(0)
-  none <- if (s <= G) choose(G, s) * 2^s else 0
-  1 - none / choose(K, s)
+complete_pair_fraction <- function(K, support_size) {
+  groups <- K / 2
+  if (support_size < 2) return(0)
+  without_pair <- if (support_size <= groups) choose(groups, support_size) * 2^support_size else 0
+  1 - without_pair / choose(K, support_size)
 }
 
-# Mediation: rescale the sizes that can be alternatives (s > t) so that the
-# expected proportion of mediation alternatives equals the pilot target
-# (0.001 at effect points, 0.025 * tau1 at signal-proportion points).
 size_probs_mediation <- function(K, t, tau1 = 0) {
-  lam <- size_probs(K, tau1)
-  target <- if (tau1 > 0) 0.025 * tau1 else 0.001
-  s <- 0:K
-  frac <- vapply(s, function(x) if (x > t) complete_pair_fraction(K, x) else 0, 0)
-  base <- sum(lam * frac)
-  elig <- s > t
-  lam[elig] <- lam[elig] * target / base
-  lam[1] <- 1 - sum(lam[-1])
-  if (lam[1] <= 0) stop("mediation calibration gives a non-positive null probability")
-  lam
+  probs <- size_probs(K, tau1)
+  target <- if (tau1 > 0) 0.025 + tau1 else 0.001
+  sizes <- 0:K
+  eligible <- sizes > t
+  pair_share <- vapply(sizes, function(s) {
+    if (s > t) complete_pair_fraction(K, s) else 0
+  }, numeric(1))
+  present <- sum(probs * pair_share)
+  probs[eligible] <- probs[eligible] * target / present
+  probs[1L] <- 1 - sum(probs[-1L])
+  if (probs[1L] <= 0) stop("Mediation calibration produced an invalid null mass")
+  probs
 }
 
-# iid configurations: rows of {-1, 0, 1}^K.
-draw_configs <- function(N, K, lam) {
-  s <- sample.int(K + 1L, N, replace = TRUE, prob = lam) - 1L
+draw_configs <- function(N, K, probabilities) {
+  support_size <- sample.int(K + 1L, N, replace = TRUE, prob = probabilities) - 1L
   H <- matrix(0L, N, K)
-  for (i in which(s > 0L)) {
-    a <- sample.int(K, s[i])
-    H[i, a] <- sample(c(-1L, 1L), s[i], replace = TRUE)
+  for (i in which(support_size > 0L)) {
+    active <- sample.int(K, support_size[i], replace = FALSE)
+    H[i, active] <- sample(c(-1L, 1L), support_size[i], replace = TRUE)
   }
   H
 }
 
-ar1 <- function(K, rho) rho^abs(outer(seq_len(K), seq_len(K), "-"))
-corr_mat <- function(K, rho, corr = "ar1") {
-  if (corr == "exch") { R <- matrix(rho, K, K); diag(R) <- 1; R } else ar1(K, rho)
-}
-LIN_SCALE <- sqrt(plogis(-1) * (1 - plogis(-1)))   # 0.444: linear effect with the logistic noncentrality
-
-# Genotypes (n x m, 0/1/2) with MAF maf. ld = 0: independent SNPs. ld > 0: each haplotype is a
-# thresholded latent Gaussian AR(1) sequence along the m SNPs with lag-one correlation ld.
-gen_geno <- function(n, m, maf, ld = 0) {
-  if (ld <= 0) return(matrix(rbinom(n * m, 2L, maf), n, m))
-  thr <- qnorm(maf); s <- sqrt(1 - ld^2)
-  hap <- function() {
-    U <- matrix(rnorm(n * m), n, m)
-    for (j in 2:m) U[, j] <- ld * U[, j - 1L] + s * U[, j]
-    (U < thr) * 1L
+.correlation_matrix <- function(K, rho, type = "ar1") {
+  if (type == "exch") {
+    R <- matrix(rho, K, K)
+    diag(R) <- 1
+    return(R)
   }
-  hap() + hap()
+  rho^abs(outer(seq_len(K), seq_len(K), "-"))
 }
 
-# Score statistic sqrt(n) * cor(g, y) of y ~ 1 + g for every column g of G (linear model).
-lin_score_z <- function(G, y) {
-  Gc <- sweep(G, 2L, colMeans(G)); yc <- y - mean(y)
-  sqrt(length(y)) * colSums(Gc * yc) / sqrt(colSums(Gc^2) * sum(yc^2))
+.linear_scale <- sqrt(plogis(-1) * (1 - plogis(-1)))
+.z_limit <- 8.1
+
+gen_genotypes <- function(n, m, maf = 0.3, ld = 0) {
+  if (ld <= 0) return(matrix(rbinom(n * m, 2L, maf), n, m))
+  latent <- matrix(0, n, m)
+  threshold <- qnorm(maf)
+  innovation <- sqrt(1 - ld^2)
+  latent[, 1L] <- rnorm(n)
+  if (m > 1L) for (j in 2:m) latent[, j] <- ld * latent[, j - 1L] + innovation * rnorm(n)
+  haplotype <- function() (latent < threshold) * 1L
+  haplotype() + haplotype()
 }
 
-# Batched least squares with t statistics: one model per column j, Y[, j] ~ X_1[, j] + ... (Xs as in
-# logit_wald_batch); returns the p x m matrix of coefficient / standard error.
-lin_wald_batch <- function(Xs, Y) {
-  n <- nrow(Y); m <- ncol(Y); p <- length(Xs)
+linear_score_z <- function(G, y) {
+  centered_G <- sweep(G, 2L, colMeans(G))
+  centered_y <- y - mean(y)
+  numerator <- colSums(centered_G * centered_y)
+  sqrt(length(y)) * numerator / sqrt(colSums(centered_G^2) * sum(centered_y^2))
+}
+
+linear_wald_batch <- function(Xs, Y) {
+  n <- nrow(Y)
+  m <- ncol(Y)
+  p <- length(Xs)
   z <- matrix(0, p, m)
   for (j in seq_len(m)) {
     X <- vapply(Xs, function(x) x[, j], numeric(n))
-    f <- stats::lm.fit(X, Y[, j])
-    if (f$rank < p || any(f$qr$pivot != seq_len(p))) next
-    s2 <- sum(f$residuals^2) / (n - p)
-    R <- qr.R(f$qr); Ri <- backsolve(R, diag(p))
-    z[, j] <- f$coefficients / sqrt(s2 * rowSums(Ri^2))
+    fit <- qr(X)
+    if (fit$rank < p) next
+    coef <- qr.coef(fit, Y[, j])
+    residual <- qr.resid(fit, Y[, j])
+    R <- qr.R(fit)
+    inverse <- chol2inv(R)
+    sigma2 <- sum(residual^2) / (n - p)
+    se <- sqrt(diag(inverse) * sigma2)
+    z[, j] <- coef / se
   }
+  z[!is.finite(z)] <- 0
   z
 }
 
-Z_MAX <- 8.1    # statistics truncated at +-8.1, as in Sun et al.
-
-# Batched logistic regression with Wald statistics: one model per column j,
-# Y[, j] ~ X_1[, j] + ... + X_p[, j] (Xs: list of n x m covariate matrices, the first
-# being the intercept). Newton-Raphson; returns the p x m coefficients, standard
-# errors and Wald statistics coef / se (as summary(glm(...))$coefficients[, 3]).
 logit_wald_batch <- function(Xs, Y, maxit = 25L, tol = 1e-8) {
-  n <- nrow(Y); m <- ncol(Y); p <- length(Xs)
-  th <- matrix(0, p, m); th[1, ] <- qlogis(pmin(pmax(colMeans(Y), 1e-6), 1 - 1e-6))
-  lin <- function(th) { e <- matrix(0, n, m); for (k in seq_len(p)) e <- e + Xs[[k]] * rep(th[k, ], each = n); e }
-  info <- function(w) {
-    I <- array(0, c(p, p, m))
-    for (u in seq_len(p)) for (v in u:p) { val <- colSums(w * Xs[[u]] * Xs[[v]]); I[u, v, ] <- val; I[v, u, ] <- val }
-    I
+  n <- nrow(Y)
+  m <- ncol(Y)
+  p <- length(Xs)
+  theta <- matrix(0, p, m)
+  theta[1L, ] <- qlogis(pmin(pmax(colMeans(Y), 1e-6), 1 - 1e-6))
+
+  information <- function(weights) {
+    result <- array(0, c(p, p, m))
+    for (u in seq_len(p)) for (v in u:p) {
+      value <- colSums(weights * Xs[[u]] * Xs[[v]])
+      result[u, v, ] <- value
+      result[v, u, ] <- value
+    }
+    result
   }
-  inv <- function(I) {                       # p x p x m inverses
-    out <- array(NA_real_, dim(I))
+  invert_pages <- function(A) {
+    result <- array(NA_real_, dim(A))
     if (p == 2L) {
-      det <- I[1, 1, ] * I[2, 2, ] - I[1, 2, ]^2
-      out[1, 1, ] <- I[2, 2, ] / det; out[2, 2, ] <- I[1, 1, ] / det; out[1, 2, ] <- out[2, 1, ] <- -I[1, 2, ] / det
-    } else for (j in seq_len(m)) out[, , j] <- tryCatch(solve(I[, , j]), error = function(e) matrix(NA_real_, p, p))
-    out
+      determinant <- A[1, 1, ] * A[2, 2, ] - A[1, 2, ]^2
+      result[1, 1, ] <- A[2, 2, ] / determinant
+      result[2, 2, ] <- A[1, 1, ] / determinant
+      result[1, 2, ] <- result[2, 1, ] <- -A[1, 2, ] / determinant
+    } else {
+      for (j in seq_len(m)) result[, , j] <- tryCatch(solve(A[, , j]), error = function(e) matrix(NA_real_, p, p))
+    }
+    result
   }
-  for (it in seq_len(maxit)) {
-    pr <- plogis(lin(th)); w <- pr * (1 - pr); r <- Y - pr
-    S <- t(matrix(vapply(Xs, function(x) colSums(x * r), numeric(m)), ncol = p))   # p x m
-    Iv <- inv(info(w))
-    D <- matrix(0, p, m)
-    for (u in seq_len(p)) for (v in seq_len(p)) D[u, ] <- D[u, ] + Iv[u, v, ] * S[v, ]
-    D[!is.finite(D)] <- 0
-    th <- th + D
-    if (max(abs(D)) < tol) break
+
+  for (iteration in seq_len(maxit)) {
+    eta <- matrix(0, n, m)
+    for (u in seq_len(p)) eta <- eta + sweep(Xs[[u]], 2L, theta[u, ], `*`)
+    fitted <- plogis(eta)
+    weights <- fitted * (1 - fitted)
+    score <- vapply(Xs, function(x) colSums(x * (Y - fitted)), numeric(m))
+    score <- t(score)
+    inverse <- invert_pages(information(weights))
+    step <- matrix(0, p, m)
+    for (j in seq_len(m)) step[, j] <- inverse[, , j] %*% score[, j]
+    step[!is.finite(step)] <- 0
+    theta <- theta + step
+    if (max(abs(step)) < tol) break
   }
-  pr <- plogis(lin(th)); Iv <- inv(info(pr * (1 - pr)))
-  se <- sqrt(pmax(t(vapply(seq_len(p), function(u) Iv[u, u, ], numeric(m))), 0))
-  if (m == 1L) se <- matrix(se, p, 1L)
-  z <- th / se
+
+  eta <- matrix(0, n, m)
+  for (u in seq_len(p)) eta <- eta + sweep(Xs[[u]], 2L, theta[u, ], `*`)
+  inverse <- invert_pages(information(plogis(eta) * (1 - plogis(eta))))
+  se <- matrix(NA_real_, p, m)
+  for (j in seq_len(m)) se[, j] <- sqrt(diag(inverse[, , j]))
+  z <- theta / se
   z[!is.finite(z)] <- 0
-  list(coef = th, se = se, z = z)
+  list(coef = theta, se = se, z = z)
 }
 
-# Wald z of y ~ 1 + g for every column g of G (genotypes 0/1/2) and a common outcome y.
-# With a three-level covariate the likelihood depends on the data only through the
-# counts n_c and events e_c at g = c (c = 0, 1, 2), so Newton-Raphson runs on three
-# cells per SNP; the estimate, standard error and Wald z equal those of
-# glm(y ~ g, family = binomial) on the individual data.
-logit_wald_geno <- function(G, y, maxit = 50L, tol = 1e-10) {
+logit_wald_genotype <- function(G, y, maxit = 50L, tol = 1e-10) {
   m <- ncol(G)
-  nc <- rbind(colSums(G == 0), colSums(G == 1), colSums(G == 2))       # 3 x m
-  ec <- rbind(colSums((G == 0) * y), colSums((G == 1) * y), colSums((G == 2) * y))
-  g <- c(0, 1, 2)
-  a <- rep(qlogis(min(max(mean(y), 1e-6), 1 - 1e-6)), m); b <- rep(0, m)
-  for (it in seq_len(maxit)) {
-    p <- plogis(rbind(a, a + b, a + 2 * b)); w <- nc * p * (1 - p); r <- ec - nc * p
-    i11 <- colSums(w); i12 <- colSums(w * g); i22 <- colSums(w * g^2)
-    s1 <- colSums(r); s2 <- colSums(r * g)
-    det <- i11 * i22 - i12^2
-    da <- (i22 * s1 - i12 * s2) / det; db <- (i11 * s2 - i12 * s1) / det
-    da[!is.finite(da)] <- 0; db[!is.finite(db)] <- 0
-    a <- a + da; b <- b + db
+  counts <- rbind(colSums(G == 0L), colSums(G == 1L), colSums(G == 2L))
+  events <- rbind(colSums((G == 0L) * y), colSums((G == 1L) * y), colSums((G == 2L) * y))
+  intercept <- rep(qlogis(pmin(pmax(mean(y), 1e-6), 1 - 1e-6)), m)
+  slope <- numeric(m)
+  genotype <- c(0, 1, 2)
+  for (iteration in seq_len(maxit)) {
+    probability <- plogis(outer(genotype, slope, `*`) + rep(intercept, each = 3L))
+    weights <- counts * probability * (1 - probability)
+    residual <- events - counts * probability
+    i11 <- colSums(weights)
+    i12 <- colSums(weights * genotype)
+    i22 <- colSums(weights * genotype^2)
+    s1 <- colSums(residual)
+    s2 <- colSums(residual * genotype)
+    determinant <- i11 * i22 - i12^2
+    da <- (i22 * s1 - i12 * s2) / determinant
+    db <- (i11 * s2 - i12 * s1) / determinant
+    da[!is.finite(da)] <- 0
+    db[!is.finite(db)] <- 0
+    intercept <- intercept + da
+    slope <- slope + db
     if (max(abs(c(da, db))) < tol) break
   }
-  p <- plogis(rbind(a, a + b, a + 2 * b)); w <- nc * p * (1 - p)
-  i11 <- colSums(w); i12 <- colSums(w * g); i22 <- colSums(w * g^2)
-  z <- b / sqrt(i11 / (i11 * i22 - i12^2))
+  probability <- plogis(outer(genotype, slope, `*`) + rep(intercept, each = 3L))
+  weights <- counts * probability * (1 - probability)
+  i11 <- colSums(weights)
+  i12 <- colSums(weights * genotype)
+  i22 <- colSums(weights * genotype^2)
+  z <- slope / sqrt(i11 / (i11 * i22 - i12^2))
   z[!is.finite(z)] <- 0
   z
 }
 
-# ---- pleiotropy / replication data (shared; fit once, scored for t = 1, 2) ----
-# As in Sun et al. (Fig. 8 code): within a set of set_size SNPs, outcome k of
-# subject i has eta_ik = b0 + sum_j G_ij beta_jk (all SNPs of the set jointly); the K
-# outcomes of a subject are generated as in bindata::rmvbin(margprob, sigma = AR1(rho)),
-# i.e. thresholded latent normals with AR(1) correlation rho; the statistic of SNP j for
-# outcome k is the Wald z of y_k ~ 1 + g_j.
-gen_pleio <- function(N, K, lam, effect, n = 1000L, maf = 0.3, b0 = -1, rho = 0.2,
-                      set_size = 1000L, outcome = "logit", ld = 0, corr = "ar1") {
-  H <- draw_configs(N, K, lam)
-  B <- H * effect
-  Lc <- chol(corr_mat(K, rho, corr))
+gen_pleiotropy <- function(N, K, probabilities, effect, n = 1000L, maf = 0.3,
+                           b0 = -1, rho = 0.2, set_size = 1000L,
+                           outcome = "logit", ld = 0, corr = "ar1") {
+  H <- draw_configs(N, K, probabilities)
+  beta <- H * effect
+  root <- chol(.correlation_matrix(K, rho, corr))
   Z <- matrix(0, N, K)
-  for (st in seq(1L, N, by = set_size)) {
-    idx <- st:min(N, st + set_size - 1L); m <- length(idx)
-    G <- gen_geno(n, m, maf, ld)
-    Lat <- matrix(rnorm(n * K), n, K) %*% Lc
+  for (start in seq.int(1L, N, by = set_size)) {
+    idx <- start:min(N, start + set_size - 1L)
+    m <- length(idx)
+    G <- gen_genotypes(n, m, maf, ld)
+    latent <- matrix(rnorm(n * K), n, K) %*% root
     if (outcome == "linear") {
-      Y <- G %*% (LIN_SCALE * B[idx, , drop = FALSE]) + Lat                # n x K, correlated errors
-      for (k in seq_len(K)) Z[idx, k] <- lin_score_z(G, Y[, k])
+      Y <- G %*% (.linear_scale * beta[idx, , drop = FALSE]) + latent
+      for (k in seq_len(K)) Z[idx, k] <- linear_score_z(G, Y[, k])
     } else {
-      eta <- G %*% B[idx, , drop = FALSE] + b0                       # n x K
-      Y <- (Lat <= qnorm(plogis(eta))) * 1
-      for (k in seq_len(K)) Z[idx, k] <- logit_wald_geno(G, Y[, k])
+      eta <- G %*% beta[idx, , drop = FALSE] + b0
+      Y <- (latent <= qnorm(plogis(eta))) * 1L
+      for (k in seq_len(K)) Z[idx, k] <- logit_wald_genotype(G, Y[, k])
     }
   }
-  list(Z = pmax(pmin(Z, Z_MAX), -Z_MAX), H = H, B = B)
+  list(Z = pmax(pmin(Z, .z_limit), -.z_limit), H = H, B = beta)
 }
 
-# ---- mediation data (common outcome, joint mediators) ----
-# For SNP j: M_jg = alpha_jg G_j + e_jg (e AR(1) across mediators g),
-#            logit P(Y_j = 1) = b0 + sum_g beta_jg M_jg (no direct effect);
-# statistics: alpha_g -> score statistic of G in the linear model M_g ~ G (as in Sun et al.);
-#             beta_g -> Wald z of M_g in the joint logistic model Y ~ G + M_1 + ... + M_G
-#             (Sun et al. use the Wald z of M in Y ~ G + M with one outcome per mediator).
-# Columns are ordered (alpha_1, beta_1, alpha_2, beta_2, ...).
-gen_mediation <- function(N, K, lam, a_rng, b_rng, n = 1000L, maf = 0.3, b0 = -1,
-                          rho = 0.2, set_size = 1000L, outcome = "logit", ld = 0, corr = "ar1") {
-  Gm <- K / 2
-  H <- draw_configs(N, K, lam)
-  odd <- seq(1L, K, by = 2L); even <- odd + 1L
+gen_mediation <- function(N, K, probabilities, alpha_range, beta_range,
+                          n = 1000L, maf = 0.3, b0 = -1, rho = 0.2,
+                          set_size = 1000L, outcome = "logit", ld = 0,
+                          corr = "ar1") {
+  mediators <- K / 2L
+  H <- draw_configs(N, K, probabilities)
+  alpha_idx <- seq.int(1L, K, by = 2L)
+  beta_idx <- alpha_idx + 1L
   B <- matrix(0, N, K)
-  B[, odd] <- H[, odd] * matrix(runif(N * Gm, a_rng[1], a_rng[2]), N, Gm)
-  B[, even] <- H[, even] * matrix(runif(N * Gm, b_rng[1], b_rng[2]), N, Gm)
-  Lc <- chol(corr_mat(Gm, rho, corr))
+  B[, alpha_idx] <- H[, alpha_idx] * matrix(runif(N * mediators, alpha_range[1L], alpha_range[2L]), N, mediators)
+  B[, beta_idx] <- H[, beta_idx] * matrix(runif(N * mediators, beta_range[1L], beta_range[2L]), N, mediators)
+  root <- chol(.correlation_matrix(mediators, rho, corr))
   Z <- matrix(0, N, K)
-  for (st in seq(1L, N, by = set_size)) {
-    idx <- st:min(N, st + set_size - 1L); m <- length(idx)
-    G <- gen_geno(n, m, maf, ld)
-    E <- matrix(rnorm(n * m * Gm), n * m, Gm) %*% Lc
-    M <- lapply(seq_len(Gm), function(g)
-      G * rep(B[idx, odd[g]], each = n) + matrix(E[, g], n, m))
+
+  for (start in seq.int(1L, N, by = set_size)) {
+    idx <- start:min(N, start + set_size - 1L)
+    m <- length(idx)
+    G <- gen_genotypes(n, m, maf, ld)
+    errors <- matrix(rnorm(n * m * mediators), n * m, mediators) %*% root
+    mediator_values <- vector("list", mediators)
     eta <- matrix(if (outcome == "linear") 0 else b0, n, m)
-    bsc <- if (outcome == "linear") LIN_SCALE else 1
-    for (g in seq_len(Gm)) eta <- eta + M[[g]] * rep(bsc * B[idx, even[g]], each = n)
-    Gc <- sweep(G, 2L, colMeans(G))
-    for (g in seq_len(Gm)) {
-      Mc <- sweep(M[[g]], 2L, colMeans(M[[g]]))
-      Z[idx, odd[g]] <- sqrt(n) * colSums(Gc * Mc) / sqrt(colSums(Gc^2) * colSums(Mc^2))
+    beta_scale <- if (outcome == "linear") .linear_scale else 1
+
+    for (g in seq_len(mediators)) {
+      mediator_values[[g]] <- G * rep(B[idx, alpha_idx[g]], each = n) + matrix(errors[, g], n, m)
+      eta <- eta + mediator_values[[g]] * rep(beta_scale * B[idx, beta_idx[g]], each = n)
+      centered_G <- sweep(G, 2L, colMeans(G))
+      centered_M <- sweep(mediator_values[[g]], 2L, colMeans(mediator_values[[g]]))
+      Z[idx, alpha_idx[g]] <- colSums(centered_G * centered_M) /
+        sqrt(colSums(centered_G^2) * colSums(centered_M^2)) * sqrt(n - 2)
     }
+
     if (outcome == "linear") {
       Y <- eta + matrix(rnorm(n * m), n, m)
-      wz <- lin_wald_batch(c(list(matrix(1, n, m), G), M), Y)
+      fit <- linear_wald_batch(c(list(matrix(1, n, m), G), mediator_values), Y)
     } else {
       Y <- matrix(rbinom(n * m, 1L, plogis(eta)), n, m)
-      wz <- logit_wald_batch(c(list(matrix(1, n, m), G), M), Y)$z     # rows: 1, G, M_1..M_Gm
+      fit <- logit_wald_batch(c(list(matrix(1, n, m), G), mediator_values), Y)$z
     }
-    for (g in seq_len(Gm)) Z[idx, even[g]] <- wz[2L + g, ]
+    for (g in seq_len(mediators)) Z[idx, beta_idx[g]] <- fit[2L + g, ]
   }
   Z[!is.finite(Z)] <- 0
-  list(Z = pmax(pmin(Z, Z_MAX), -Z_MAX), H = H, B = B)
+  list(Z = pmax(pmin(Z, .z_limit), -.z_limit), H = H, B = B)
 }
 
-# Seeds: one stream per (scenario, design, K, t, replicate, role).
-sim_seed <- function(scen, design_id, K, t, rep, role) {
-  # Replicates 1-200 keep the original seeds. Replicates above 200 use a wider
-  # replicate field, which keeps every seed distinct from those of replicates 1-200.
-  if (rep > 200L)
-    return(as.integer(1000000000 + ((((scen * 10L + design_id) * 11L + K) * 3L + t) * 1000L + rep) * 2L + role) %% .Machine$integer.max)
-  as.integer(((((scen * 10L + design_id) * 11L + K) * 3L + t) * 100L + rep) * 2L + role) %% .Machine$integer.max
+sim_seed <- function(stream, design, K, t, replicate, role) {
+  key <- ((((stream * 10L + design) * 11L + K) * 3L + t) * 1000L + replicate) * 2L + role
+  if (replicate > 200L) {
+    return(as.integer((1000000000 + key) %% .Machine$integer.max))
+  }
+  as.integer(key %% .Machine$integer.max)
 }
 
-# One dataset per replicate; as in Sun et al., every method is fitted and evaluated
-# on the same data (train and test below are the same object). Seed streams:
-# pl 1 / 3 / 5, med 2 / 4, rp 7 / 9 / 11 (main / rho / sym).
-make_dataset <- function(scen, d, K, t, rep, N = 100000L, study = "main") {
-  # study "split": the training data are those of the main study (same design
-  # table, same seeds), and the test data are an independent dataset of the same design
-  # (role 2), as in the setting of main-text Theorem 3.
-  split <- study == "split"; if (split) study <- "main"
-  dt <- design_table(study, scen)[d, ]
+make_dataset <- function(scen, d, K, t, replicate, N = 100000L, study = "main") {
+  split_sample <- identical(study, "split")
+  effective_study <- if (split_sample) "main" else study
+  design <- design_table(effective_study, scen)[d, , drop = FALSE]
   stream <- c(pl = 1L, med = 2L, rp = 7L)[[scen]] +
-    switch(study, main = 0L, rho = 2L, sym = 4L, quant = 20L, ld = 40L, ldloc = 40L, ldu = 40L, exch = 60L)
-  gen <- function(role) {
-    set.seed(sim_seed(stream, d, K, t, rep, role))
+    c(main = 0L, rho = 2L, sym = 4L, quant = 20L, ld = 40L,
+      ldloc = 40L, ldu = 40L, exch = 60L)[[effective_study]]
+
+  generate <- function(role) {
+    set.seed(sim_seed(stream, d, K, t, replicate, role))
     if (scen %in% c("pl", "rp")) {
-      gen_pleio(N, K, size_probs(K, dt$tau1), dt$effect, rho = dt$rho, b0 = dt$b0,
-                outcome = dt$outcome, ld = dt$ld, corr = dt$corr)
+      gen_pleiotropy(N, K, size_probs(K, design$tau1), design$effect,
+                     rho = design$rho, b0 = design$b0, outcome = design$outcome,
+                     ld = design$ld, corr = design$corr)
     } else {
-      gen_mediation(N, K, size_probs_mediation(K, t, dt$tau1), c(dt$a_min, dt$a_max),
-                    c(dt$b_min, dt$b_max), rho = dt$rho, b0 = dt$b0,
-                    outcome = dt$outcome, ld = dt$ld, corr = dt$corr)
+      gen_mediation(N, K, size_probs_mediation(K, t, design$tau1),
+                    c(design$a_min, design$a_max), c(design$b_min, design$b_max),
+                    rho = design$rho, b0 = design$b0, outcome = design$outcome,
+                    ld = design$ld, corr = design$corr)
     }
   }
-  dat <- gen(1L)
-  list(train = dat, test = if (split) gen(2L) else dat, design = dt)
+
+  train <- generate(1L)
+  list(train = train, test = if (split_sample) generate(2L) else train, design = design)
 }
 
 truth_alt <- function(H, target, t) {
-  s <- rowSums(H != 0)
+  active <- rowSums(H != 0)
   switch(target,
-    pleiotropy = s > t,
-    replication = s > t & abs(rowSums(H)) == s,
-    mediation = {
-      pr <- matrix(seq_len(ncol(H)), ncol = 2L, byrow = TRUE)
-      s > t & rowSums((H[, pr[, 1], drop = FALSE] != 0) & (H[, pr[, 2], drop = FALSE] != 0)) >= 1
-    })
+         pleiotropy = active > t,
+         replication = active > t & abs(rowSums(H)) == active,
+         mediation = {
+           pair_index <- matrix(seq_len(ncol(H)), ncol = 2L, byrow = TRUE)
+           complete <- rowSums((H[, pair_index[, 1L], drop = FALSE] != 0) &
+                                 (H[, pair_index[, 2L], drop = FALSE] != 0))
+           active > t & complete >= 1L
+         },
+         stop("Unknown target: ", target))
 }
 
-# Locus-level truth (LD study): feature j counts as a true discovery at the locus level
-# if some feature of the same set of set_size consecutive SNPs within w positions of j is an
-# alternative (lag-w latent correlation 0.5^w; w = 5 gives 0.03).
-truth_alt_locus <- function(alt, w = 5L, set_size = 1000L) {
-  N <- length(alt); out <- logical(N)
-  for (st in seq(1L, N, by = set_size)) {
-    idx <- st:min(N, st + set_size - 1L); a <- alt[idx]; m <- length(a)
-    cs <- c(0L, cumsum(a)); lo <- pmax(1L, seq_len(m) - w); hi <- pmin(m, seq_len(m) + w)
-    out[idx] <- (cs[hi + 1L] - cs[lo]) > 0L
+truth_alt_locus <- function(alt, window = 5L, set_size = 1000L) {
+  out <- logical(length(alt))
+  for (start in seq.int(1L, length(alt), by = set_size)) {
+    idx <- start:min(length(alt), start + set_size - 1L)
+    cumulative <- c(0L, cumsum(alt[idx]))
+    lo <- pmax(1L, seq_along(idx) - window)
+    hi <- pmin(length(idx), seq_along(idx) + window)
+    out[idx] <- cumulative[hi + 1L] - cumulative[lo] > 0L
   }
   out
 }
 
-# Locus-level truth by union of nearby effects: the effect configuration of feature j is
-# taken as the signed union of the configurations of the features of its set within w positions
-# (coordinate k nonzero if some such feature has a nonzero effect on k, with the sign of their sum),
-# so that a null variant in linkage disequilibrium with, e.g., two single-trait variants of different
-# traits counts as pleiotropic. The target is then evaluated on this union configuration.
-union_config <- function(H, w = 2L, set_size = 1000L) {
-  N <- nrow(H); U <- matrix(0L, N, ncol(H))
-  for (st in seq(1L, N, by = set_size)) {
-    idx <- st:min(N, st + set_size - 1L); m <- length(idx)
+union_config <- function(H, window = 2L, set_size = 1000L) {
+  out <- matrix(0L, nrow(H), ncol(H))
+  for (start in seq.int(1L, nrow(H), by = set_size)) {
+    idx <- start:min(nrow(H), start + set_size - 1L)
     for (k in seq_len(ncol(H))) {
-      h <- H[idx, k]; cs <- c(0, cumsum(h)); ca <- c(0L, cumsum(h != 0))
-      lo <- pmax(1L, seq_len(m) - w); hi <- pmin(m, seq_len(m) + w)
-      any_nz <- (ca[hi + 1L] - ca[lo]) > 0L; sm <- cs[hi + 1L] - cs[lo]
-      U[idx, k] <- ifelse(any_nz, ifelse(sm >= 0, 1L, -1L), 0L)
+      values <- H[idx, k]
+      signed_sum <- c(0L, cumsum(values))
+      nonzero_sum <- c(0L, cumsum(values != 0L))
+      lo <- pmax(1L, seq_along(idx) - window)
+      hi <- pmin(length(idx), seq_along(idx) + window)
+      has_signal <- nonzero_sum[hi + 1L] - nonzero_sum[lo] > 0L
+      direction <- signed_sum[hi + 1L] - signed_sum[lo]
+      out[idx, k] <- ifelse(has_signal, ifelse(direction >= 0, 1L, -1L), 0L)
     }
   }
-  U
+  out
 }

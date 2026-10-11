@@ -1,13 +1,7 @@
-# Mediation application with three mediators per variant (liver expression of the three nearest
-# genes; outcome LDL cholesterol; K = 6, t = 1, 2). Data: Data/prepare_mediation_ldl.R.
-#   Rscript Fig4/mediation_ldl_fit.R <job 1-23>     (or bsub < Fig4/run_mediation_ldl.lsf)
-# Jobs (MEDLDL_JOBS): data set "noshare" x {estimated Sigma, Sigma = I, robust Sigma} x a_mu in
-# {0.5, 1.5} (jobs 1-6), data set "nearest" with estimated Sigma, a_mu in {0.5, 1.5} (7-8), and
-# data set "noshare_dedup" (one variant per gene triple) x the three Sigma x a_mu in {0.5, 1.5} (9-14), and
-# data set "noshare_cond" (alpha conditional on the lead eQTL variant) likewise (15-20), and data set
-# "noshare" x the three Sigma with a_mu = 3 (21-23; Supplementary Tables 24-26).
 here::i_am("Fig4/mediation_ldl_fit.R")
 source(here::here("SupportingCode", "load_all.R"))
-j <- MEDLDL_JOBS[as.integer(commandArgs(trailingOnly = TRUE)[1]), ]
-print(j)
-run_mediation_ldl(j$set, j$variant, a_mu = j$a_mu)
+args <- commandArgs(trailingOnly = TRUE)
+set <- if (length(args)) args[1L] else "noshare"
+variant <- if (length(args) >= 2L) args[2L] else "main"
+a_mu <- if (length(args) >= 3L) as.numeric(args[3L]) else 0.5
+run_mediation_ldl(set, variant, a_mu)

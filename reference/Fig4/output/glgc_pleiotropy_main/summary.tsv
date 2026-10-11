@@ -1,3 +1,0 @@
-analysis	variant	a_mu	target	K	t	q	n_fit	n_test	converged	selected_start	iterations	loglik	fit_minutes	R_raw	R_adj	R_both	frac_raw	cutoff_raw	avg_lfdr_raw	loci_raw	loci_adj	n_adjusted_up	incon_score_raw	incon_score_adj	incon_dec_raw	incon_dec_adj	extrap_flags	minutes_inference
-glgc_pleiotropy	main	0.5	pleiotropy	5	1	0.1	264749	9653111	TRUE	null	332	-7.21862096972892	10.6	829333	655621	644306	0.0859135464204234	0.437088100906497	0.0999998383475911	3610	3297	7267735	1537	0	1245233	43	0	2.97
-glgc_pleiotropy	main	0.5	pleiotropy	5	2	0.1	264749	9653111	TRUE	null	332	-7.21862096972892	10.6	426144	295224	292689	0.0441457681363034	0.538994463304197	0.0999993427840734	2338	1844	7959899	1304	0	109027	0	0	2.39

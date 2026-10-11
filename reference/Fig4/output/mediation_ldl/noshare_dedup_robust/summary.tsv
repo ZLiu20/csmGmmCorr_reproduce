@@ -1,3 +1,0 @@
-variant	a_mu	t	n_features	n_triples	converged	loglik	fit_minutes	null_weight	R_raw	R_adj	triples_raw	loci_raw	loci_adj	extrap_flags
-noshare_dedup_robust	0.5	1	10919	10919	TRUE	-12.1811345700688	0.87	0.249409682449502	5927	4383	5927	1798	1536	0
-noshare_dedup_robust	0.5	2	10919	10919	TRUE	-12.1811345700688	0.87	0.249409682449502	5870	4275	5870	1788	1514	0

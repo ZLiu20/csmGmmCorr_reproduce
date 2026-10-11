@@ -1,146 +1,159 @@
-# Conditional exposure-mediator statistics for the LDL mediation application.
-# The marginal liver eQTL z of a variant j for gene g picks up r * z_c from the lead eQTL variant c
-# of g when j and c are in linkage disequilibrium (r = their correlation), so variants without an
-# effect of their own have nonzero marginal alpha. Here alpha is replaced by the z-statistic of j
-# conditional on the lead variant of g (one-step conditioning, as in COJO):
-#   alpha_cond = (z_j - r z_c) / sqrt(1 - r^2),
-# with r from the 1000 Genomes EUR reference. Exceptions: j = c keeps its marginal z; when
-# r^2 >= R2_PROXY, j is a proxy of the lead and keeps its marginal z (the two cannot be told apart).
-# Features whose r with any lead is unavailable (variant or lead not in the reference) are dropped.
-# The lead variant of a gene is its common SNV with the largest |z| in the liver eQTL file.
-# beta (S-PrediXcan) is unchanged.
-# Input: Data/mediation/mediation_ldl_liver_noshare.tsv.gz and Data/prepared/mediation_ldl/liver_pairs/
-# (Data/prepare_mediation_ldl.R), the GTEx v8 lookup table (build-37 positions), and a PLINK 1.9
-# binary fileset of the 1000 Genomes EUR samples on build 37, or the folder of the 1000 Genomes
-# phase-3 VCFs (Data/download_1000g.sh); from the VCFs, the EUR samples and the needed biallelic
-# SNVs are extracted with bcftools and converted with plink.
-#   Rscript Data/prepare_mediation_ldl_cond.R <bfile prefix | 1000G VCF folder> [plink binary] [bcftools binary]
-# Output: Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz (alpha1-3 conditional; the
-# marginal values in alpha1_marg-alpha3_marg; how each alpha was obtained in alpha1_how-alpha3_how).
 here::i_am("Data/prepare_mediation_ldl_cond.R")
-suppressMessages(library(data.table))
-say <- function(...) { cat(format(Sys.time(), "%H:%M:%S"), sprintf(...), "\n"); flush.console() }
-a <- commandArgs(trailingOnly = TRUE)
-bfile <- a[1]; plink <- if (length(a) >= 2) a[2] else "plink"; bcftools <- if (length(a) >= 3) a[3] else "bcftools"
-vcfdir <- if (dir.exists(bfile)) bfile else NA_character_
-if (is.na(vcfdir) && !file.exists(paste0(bfile, ".bim"))) stop("PLINK fileset or VCF folder not found: ", bfile)
-R2_PROXY <- 0.8
-zcat <- function(f) paste("gzip -cd", shQuote(f))
+suppressPackageStartupMessages(library(data.table))
+
+say <- function(...) {
+  cat(format(Sys.time(), "%H:%M:%S"), sprintf(...), "\n")
+  flush.console()
+}
+args <- commandArgs(trailingOnly = TRUE)
+reference <- if (length(args)) args[1L] else Sys.getenv("PLINK_BFILE", "")
+plink <- if (length(args) >= 2L) args[2L] else "plink"
+bcftools <- if (length(args) >= 3L) args[3L] else "bcftools"
+vcf_dir <- if (dir.exists(reference)) reference else NA_character_
+if (is.na(vcf_dir) && !file.exists(paste0(reference, ".bim"))) {
+  stop("Supply a PLINK binary prefix or a folder with 1000 Genomes VCFs")
+}
+rho2_proxy <- 0.8
 root <- Sys.getenv("MEDLDL_OUT", here::here("Data"))
-tmp <- file.path(root, "prepared", "mediation_ldl"); sdir <- file.path(tmp, "liver_pairs")
-cdir <- file.path(tmp, "cond"); dir.create(cdir, recursive = TRUE, showWarnings = FALSE)
-src <- Sys.getenv("MEDLDL_SRC", here::here("Data", "raw", "mediation_ldl"))
-D <- fread(cmd = zcat(file.path(root, "mediation", "mediation_ldl_liver_noshare.tsv.gz")))
-genes <- unique(c(D$gene1, D$gene2, D$gene3))
-say("features: %d, genes: %d", nrow(D), length(genes))
+source_root <- Sys.getenv("MEDLDL_SRC", here::here("Data", "raw", "mediation_ldl"))
+work_dir <- file.path(root, "prepared", "mediation_ldl", "conditional")
+dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
+input <- file.path(root, "mediation", "mediation_ldl_liver_noshare.tsv.gz")
+if (!file.exists(input)) stop("Run Data/prepare_mediation_ldl.R first")
+d <- fread(input)
+genes <- unique(c(d$gene1, d$gene2, d$gene3))
+say("features=%d, genes=%d", nrow(d), length(genes))
 
-# ---- 1. lead eQTL variant of each gene --------------------------------------------------------
-leads <- rbindlist(lapply(1:22, function(k) {
-  f <- file.path(sdir, sprintf("chr%d.tsv.gz", k)); if (!file.exists(f)) return(NULL)
-  d <- fread(cmd = zcat(f), header = FALSE, col.names = c("gene", "variant", "pos", "tss", "z"))
-  d <- d[gene %chin% genes & is.finite(z)]
-  d[d[, .I[which.max(abs(z))], by = gene]$V1, .(gene, lead = variant, lead_z = z)]
+split_dir <- file.path(root, "prepared", "mediation_ldl", "liver_pairs")
+lead_rows <- rbindlist(lapply(1:22, function(chromosome) {
+  path <- file.path(split_dir, sprintf("chr%d.tsv", chromosome))
+  if (!file.exists(path)) return(NULL)
+  x <- fread(path, header = FALSE,
+             col.names = c("gene", "variant", "pos", "ref", "alt", "maf", "beta", "se", "type"))
+  x <- x[gene %chin% genes & is.finite(beta) & is.finite(se) & se > 0]
+  x[, z := beta / se]
+  x[, .SD[which.max(abs(z))], by = gene][, .(gene, lead = variant, lead_z = z)]
 }))
-say("lead variants: %d genes", nrow(leads))
+if (!nrow(lead_rows)) stop("No lead eQTL variants were found")
 
-# ---- 2. build-37 positions and alleles (GTEx lookup table) ------------------------------------
-vars <- unique(c(D$variant, leads$lead))
-look <- fread(cmd = zcat(file.path(src, "GTEx_v8_lookup_table.txt.gz")), select = c("variant_id", "variant_id_b37"))
-look[, v := sub("_b38$", "", variant_id)]
-look <- look[v %chin% vars & !is.na(variant_id_b37) & nzchar(variant_id_b37)]
-look[, c("c37", "p37", "r37", "a37") := tstrsplit(variant_id_b37, "_", keep = 1:4)]
-look <- look[!(v %chin% v[duplicated(v)])]
-say("variants: %d, with a build-37 position: %d", length(vars), nrow(look))
+lookup <- fread(cmd = paste("gzip -cd", shQuote(file.path(source_root, "GTEx_v8_lookup_table.txt.gz"))),
+                select = c("variant_id", "variant_id_b37"))
+needed <- unique(c(d$variant, lead_rows$lead))
+lookup <- lookup[variant_id %chin% needed & !is.na(variant_id_b37) & nzchar(variant_id_b37)]
+lookup[, c("chr", "pos", "ref", "alt") := tstrsplit(variant_id_b37, "_", fixed = TRUE, keep = 1:4)]
+lookup[, `:=`(chr = as.integer(sub("^chr", "", chr, ignore.case = TRUE)), pos = as.integer(pos))]
+lookup <- unique(lookup[!is.na(chr), .(variant = variant_id, chr, pos,
+                                      ref = toupper(ref), alt = toupper(alt))])
 
-# ---- 2b. from 1000 Genomes VCFs: EUR samples, needed biallelic SNVs, PLINK fileset ------------
-if (!is.na(vcfdir)) {
-  ref <- file.path(cdir, "g1000_eur_needed")
-  if (!file.exists(paste0(ref, ".bim"))) {
-    panel <- fread(file.path(vcfdir, "integrated_call_samples_v3.20130502.ALL.panel"))
-    eur <- file.path(cdir, "eur_samples.txt"); writeLines(panel[super_pop == "EUR", sample], eur)
-    reg <- unique(look[, .(chr = as.integer(c37), pos = as.integer(p37))])[!is.na(chr)][order(chr, pos)]
-    parts <- character(0)
-    for (k in 1:22) {
-      vcf <- file.path(vcfdir, sprintf("ALL.chr%d.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz", k))
-      if (!file.exists(vcf)) stop("missing ", vcf)
-      rk <- file.path(cdir, sprintf("regions_chr%d.txt", k)); fwrite(reg[chr == k], rk, sep = "\t", col.names = FALSE)
-      out <- file.path(cdir, sprintf("eur_chr%d.vcf.gz", k))
-      st <- system2(bcftools, c("view", "-R", rk, "-S", eur, "--force-samples", "-v", "snps", "-m2", "-M2", "-Oz", "-o", out, vcf))
-      if (st != 0) stop("bcftools view failed for chr", k)
-      parts <- c(parts, out); say("chr%d: extracted", k)
-    }
-    allv <- file.path(cdir, "eur_all.vcf.gz")
-    if (system2(bcftools, c("concat", "-Oz", "-o", allv, parts)) != 0) stop("bcftools concat failed")
-    st <- system2(plink, c("--vcf", allv, "--double-id", "--set-missing-var-ids", "@:#", "--make-bed", "--out", ref))
-    if (st != 0) stop("plink --vcf failed")
+if (!is.na(vcf_dir)) {
+  panel_path <- file.path(vcf_dir, "integrated_call_samples_v3.20130502.ALL.panel")
+  panel <- fread(panel_path)
+  european <- panel[super_pop == "EUR", sample]
+  sample_file <- file.path(work_dir, "eur_samples.txt")
+  writeLines(european, sample_file)
+  regions <- unique(lookup[, .(chr, pos)])[order(chr, pos)]
+  parts <- character()
+  for (chromosome in 1:22) {
+    vcf <- file.path(vcf_dir, sprintf("ALL.chr%d.phase3_shapeit2_mvncall_integrated_v5b.20130502.genotypes.vcf.gz", chromosome))
+    if (!file.exists(vcf)) stop("Missing reference VCF: ", vcf)
+    region_file <- file.path(work_dir, sprintf("regions_chr%d.tsv", chromosome))
+    fwrite(regions[chr == chromosome], region_file, sep = "\t", col.names = FALSE)
+    part <- file.path(work_dir, sprintf("eur_chr%d.vcf.gz", chromosome))
+    status <- system2(bcftools, c("view", "-R", region_file, "-S", sample_file,
+                                  "-v", "snps", "-m2", "-M2", "-Oz", "-o", part, vcf))
+    if (status != 0L) stop("bcftools view failed for chromosome ", chromosome)
+    parts <- c(parts, part)
   }
-  bfile <- ref
+  joined <- file.path(work_dir, "eur_all.vcf.gz")
+  if (system2(bcftools, c("concat", "-Oz", "-o", joined, parts)) != 0L) stop("bcftools concat failed")
+  reference <- file.path(work_dir, "g1000_eur_needed")
+  if (system2(plink, c("--vcf", joined, "--double-id", "--set-missing-var-ids", "@:#[b37]$r,$a",
+                       "--make-bed", "--out", reference)) != 0L) stop("PLINK VCF conversion failed")
 }
 
-# ---- 3. subset of the reference, variant IDs = GTEx IDs, allele signs --------------------------
-bim <- fread(paste0(bfile, ".bim"), header = FALSE, col.names = c("chr", "id", "cm", "pos", "a1", "a2"),
-             colClasses = list(character = c(1, 2, 5, 6)))
-bim[, chr := sub("^chr", "", chr)][, key := paste(chr, pos, sep = ":")]
-look[, key := paste(c37, p37, sep = ":")]
-m <- merge(look[, .(v, key, r37, a37)], bim[, .(key, chr, pos, a1, a2)], by = "key", allow.cartesian = TRUE)
-m <- m[(a1 == a37 & a2 == r37) | (a1 == r37 & a2 == a37)]
-m[, s := fifelse(a1 == a37, 1, -1)]              # +1 when the reference A1 allele is the GTEx ALT allele
-m <- m[!(v %chin% v[duplicated(v)]) & !(key %chin% key[duplicated(key)])]
-say("variants matched to the reference (position and alleles): %d", nrow(m))
-rng <- file.path(cdir, "range.txt"); fwrite(m[, .(chr, pos, pos, v)], rng, sep = " ", col.names = FALSE)
-sub_b <- file.path(cdir, "ref_subset")
-st <- system2(plink, c("--bfile", bfile, "--extract", "range", rng, "--make-bed", "--out", sub_b, "--allow-no-sex"))
-if (st != 0) stop("plink --extract failed")
-sb <- fread(paste0(sub_b, ".bim"), header = FALSE, col.names = c("chr", "id", "cm", "pos", "a1", "a2"),
-            colClasses = list(character = c(1, 2, 5, 6)))
-sb[, chr := sub("^chr", "", chr)][, key := paste(chr, pos, sep = ":")]
-sb[, id := m$v[match(paste(key, a1, a2), paste(m$key, m$a1, m$a2))]]
-sb[is.na(id), id := sprintf("unused_%d", .I)]
-fwrite(sb[, .(chr, id, cm, pos, a1, a2)], paste0(sub_b, ".bim"), sep = "\t", col.names = FALSE)
-lf <- file.path(cdir, "leads.txt"); writeLines(intersect(unique(leads$lead), sb$id), lf)
-ldo <- file.path(cdir, "lead_ld")
-st <- system2(plink, c("--bfile", sub_b, "--r", "--ld-snp-list", lf, "--ld-window-kb", "1500", "--ld-window", "999999",
-                       "--ld-window-r2", "0", "--out", ldo, "--allow-no-sex"))
-if (st != 0) stop("plink --r failed")
-ld <- fread(paste0(ldo, ".ld"), select = c("SNP_A", "SNP_B", "R"))
-sg <- setNames(m$s, m$v)
-ld[, R := R * sg[SNP_A] * sg[SNP_B]]           # correlation of the ALT-allele counts
-ld <- ld[is.finite(R)]
-ld <- unique(rbind(ld[, .(lead = SNP_A, variant = SNP_B, r = R)], ld[, .(lead = SNP_B, variant = SNP_A, r = R)]),
-             by = c("lead", "variant"))
+bim <- fread(paste0(reference, ".bim"), header = FALSE,
+             col.names = c("chr", "id", "cm", "pos", "a1", "a2"),
+             colClasses = list(character = c("id", "a1", "a2")))
+bim[, `:=`(a1 = toupper(a1), a2 = toupper(a2))]
+matched <- merge(lookup, bim[, .(chr, pos, a1, a2)],
+                 by = c("chr", "pos"), allow.cartesian = TRUE)
+matched <- matched[(a1 == alt & a2 == ref) | (a1 == ref & a2 == alt)]
+matched[, effect_sign := fifelse(a1 == alt, 1, -1)]
+matched <- matched[!variant %chin% variant[duplicated(variant)]]
+say("reference variants matched by position and alleles: %d", nrow(matched))
+
+range_file <- file.path(work_dir, "range.tsv")
+fwrite(matched[, .(chr, pos, pos, variant)], range_file, sep = "\t", col.names = FALSE)
+subset_prefix <- file.path(work_dir, "reference_subset")
+if (system2(plink, c("--bfile", reference, "--extract", "range", range_file,
+                     "--make-bed", "--out", subset_prefix, "--allow-no-sex")) != 0L) {
+  stop("PLINK reference subset failed")
+}
+subset_bim <- fread(paste0(subset_prefix, ".bim"), header = FALSE,
+                    col.names = c("chr", "id", "cm", "pos", "a1", "a2"))
+subset_bim[, `:=`(a1 = toupper(a1), a2 = toupper(a2))]
+mapped_id <- merge(subset_bim, matched, by = c("chr", "pos", "a1", "a2"), all.x = TRUE)
+if (anyNA(mapped_id$variant)) stop("Reference subset contains unmatched variants")
+subset_bim[, id := mapped_id$variant[match(paste(chr, pos, a1, a2),
+                                           paste(mapped_id$chr, mapped_id$pos,
+                                                 mapped_id$a1, mapped_id$a2))]]
+fwrite(subset_bim, paste0(subset_prefix, ".bim"), sep = "\t", col.names = FALSE)
+
+lead_file <- file.path(work_dir, "lead_variants.txt")
+writeLines(unique(lead_rows$lead), lead_file)
+ld_prefix <- file.path(work_dir, "lead_ld")
+if (system2(plink, c("--bfile", subset_prefix, "--r", "--ld-snp-list", lead_file,
+                     "--ld-window-kb", "1500", "--ld-window", "999999",
+                     "--ld-window-r2", "0", "--out", ld_prefix, "--allow-no-sex")) != 0L) {
+  stop("PLINK correlation calculation failed")
+}
+ld <- fread(paste0(ld_prefix, ".ld"), select = c("SNP_A", "SNP_B", "R"))
+sign_map <- setNames(matched$effect_sign, matched$variant)
+ld[, R := R * sign_map[SNP_A] * sign_map[SNP_B]]
+ld <- unique(rbind(ld[, .(lead = SNP_A, variant = SNP_B, r = R)],
+                   ld[, .(lead = SNP_B, variant = SNP_A, r = R)]))
 setkey(ld, lead, variant)
-say("lead-variant correlations: %d pairs", nrow(ld))
 
-# ---- 4. conditional alpha -----------------------------------------------------------------------
-lz <- setNames(leads$lead_z, leads$gene); lv <- setNames(leads$lead, leads$gene)
-cond_alpha <- function(vv, gene, z) {
-  # (argument names differ from the columns of ld: data.table looks up names in i among its columns)
-  cl <- unname(lv[gene]); zc <- unname(lz[gene])
-  rr <- ld[data.table(lead = cl, variant = vv), on = c("lead", "variant"), x.r]
-  how <- fifelse(!is.na(cl) & vv == cl, "lead", fifelse(is.na(rr), "no_ld", fifelse(rr^2 >= R2_PROXY, "proxy", "conditional")))
-  val <- fifelse(how %chin% c("lead", "proxy"), z, (z - rr * zc) / sqrt(1 - rr^2))
-  val[how == "no_ld"] <- NA_real_
-  r <- rr
-  list(val, how, r)
+lead_by_gene <- setNames(lead_rows$lead, lead_rows$gene)
+lead_z_by_gene <- setNames(lead_rows$lead_z, lead_rows$gene)
+conditional_alpha <- function(variant, gene, z) {
+  lead <- unname(lead_by_gene[[gene]])
+  lead_z <- unname(lead_z_by_gene[[gene]])
+  correlation <- ld[data.table(lead = lead, variant = variant), r]
+  if (!length(correlation)) correlation <- NA_real_
+  if (variant == lead) {
+    value <- z; how <- "lead"
+  } else if (!is.finite(correlation)) {
+    value <- z; how <- "no_ld"
+  } else if (correlation^2 >= rho2_proxy) {
+    value <- z; how <- "proxy"
+  } else {
+    value <- (z - correlation * lead_z) / sqrt(1 - correlation^2)
+    how <- "conditional"
+  }
+  list(value = value, how = how, r = correlation)
 }
+
 for (g in 1:3) {
-  res <- cond_alpha(D$variant, D[[paste0("gene", g)]], D[[paste0("alpha", g)]])
-  D[, (paste0("alpha", g, "_marg")) := get(paste0("alpha", g))]
-  D[, (paste0("alpha", g)) := res[[1]]][, (paste0("alpha", g, "_how")) := res[[2]]][, (paste0("r_lead", g)) := res[[3]]]
+  result <- Map(conditional_alpha, d$variant, d[[paste0("gene", g)]],
+                d[[paste0("alpha", g)]])
+  d[, paste0("alpha", g, "_marg") := get(paste0("alpha", g))]
+  d[, paste0("alpha", g) := vapply(result, `[[`, numeric(1L), "value")]
+  d[, paste0("alpha", g, "_how") := vapply(result, `[[`, character(1L), "how")]
+  d[, paste0("r_lead", g) := vapply(result, `[[`, numeric(1L), "r")]
 }
-# check of the allele alignment: among conditioned variants with |r| > 0.3 the marginal z must
-# follow r * z_lead (a negative correlation would mean a sign error)
-chk <- rbindlist(lapply(1:3, function(g) D[get(paste0("alpha", g, "_how")) == "conditional" & abs(get(paste0("r_lead", g))) > 0.3,
-  .(zm = get(paste0("alpha", g, "_marg")), pred = get(paste0("r_lead", g)) * lz[get(paste0("gene", g))])]))
-cc <- if (nrow(chk) > 10) cor(chk$zm, chk$pred) else NA
-say("alignment check: cor(marginal z, r * z_lead) = %.3f over %d values", cc, nrow(chk))
-if (is.na(cc) || cc < 0.3) stop("allele alignment check failed")
-print(rbindlist(lapply(1:3, function(g) D[, .N, by = .(how = get(paste0("alpha", g, "_how")))][, alpha := g][])))
-D <- D[stats::complete.cases(D[, .(alpha1, alpha2, alpha3)])]
-fwrite(D, file.path(root, "mediation", "mediation_ldl_liver_noshare_cond.tsv.gz"), sep = "\t")
-Zm <- as.matrix(D[, .(alpha1_marg, alpha2_marg, alpha3_marg)]); Zc <- as.matrix(D[, .(alpha1, alpha2, alpha3)])
-iq <- function(x) diff(stats::quantile(x, c(.25, .75))) / 1.349
-say("features kept: %d", nrow(D))
-print(data.table(alpha = 1:3, iqr_sd_marginal = round(apply(Zm, 2, iq), 2), iqr_sd_conditional = round(apply(Zc, 2, iq), 2),
-                 abs_gt4_marginal = round(colMeans(abs(Zm) > 4), 4), abs_gt4_conditional = round(colMeans(abs(Zc) > 4), 4)))
+
+d <- d[complete.cases(d[, .(alpha1, alpha2, alpha3)])]
+output <- file.path(root, "mediation", "mediation_ldl_liver_noshare_cond.tsv.gz")
+fwrite(d, output, sep = "\t")
+iqr_scale <- function(x) diff(quantile(x, c(.25, .75))) / 1.349
+marginal <- as.matrix(d[, .(alpha1_marg, alpha2_marg, alpha3_marg)])
+conditional <- as.matrix(d[, .(alpha1, alpha2, alpha3)])
+print(data.table(
+  alpha = 1:3,
+  iqr_sd_marginal = round(apply(marginal, 2L, iqr_scale), 2L),
+  iqr_sd_conditional = round(apply(conditional, 2L, iqr_scale), 2L),
+  abs_gt4_marginal = round(colMeans(abs(marginal) > 4), 4L),
+  abs_gt4_conditional = round(colMeans(abs(conditional) > 4), 4L)
+))
 say("DONE")

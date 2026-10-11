@@ -1,12 +1,12 @@
-#BSUB -J SuppTab4[1-10]
-#BSUB -W 4:00
-#BSUB -o SuppTab4/errDir/SuppTab4_%I.out
-#BSUB -e SuppTab4/errDir/SuppTab4_%I.err
-#BSUB -q medium
+#!/usr/bin/env bash
+#BSUB -J floor_study[1-200]%20
+#BSUB -q long
+#BSUB -W 08:00
 #BSUB -n 1
-#BSUB -R "span[hosts=1] rusage[mem=8]"
 #BSUB -M 8
-
-# run 1-10
+#BSUB -R "rusage[mem=8]"
+#BSUB -o SuppTab4/errDir/floor_%J_%I.out
+#BSUB -e SuppTab4/errDir/floor_%J_%I.err
+set -euo pipefail
 module load R/4.5.1
-Rscript SuppTab4/SuppTab4_sim.R $LSB_JOBINDEX
+Rscript SuppTab4/SuppTab4_sim.R "${LSB_JOBINDEX:?}"

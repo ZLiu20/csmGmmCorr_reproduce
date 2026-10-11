@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 #BSUB -J main_ours_rp_pen_L100A10[1-30]%200
 #BSUB -W 12:00
 #BSUB -o SuppTab3/errDir/main_ours_rp_pen_L100A10_%I.out
@@ -7,9 +8,7 @@
 #BSUB -R "span[hosts=1] rusage[mem=8]"
 #BSUB -M 8
 
-# run 1-30
-# Submit from the repository root:  bsub < SuppTab3/run_main_ours_rp_pen_L100A10.lsf
-# (queue, memory unit and module name may need to be adapted to the cluster)
+set -euo pipefail
 module load R/4.5.1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-Rscript SuppTab3/main_ours_rp_pen_L100A10_sim.R $LSB_JOBINDEX
+Rscript SuppTab3/main_ours_rp_pen_L100A10_sim.R "$LSB_JOBINDEX"

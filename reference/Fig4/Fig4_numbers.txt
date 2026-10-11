@@ -1,6 +1,0 @@
-UKB pleiotropy, t = 2: Sigma = I only loci: 549; median largest |z| of their leads 3.2 vs 4.4 for the correlated csmGmm loci; median number of traits with |z| > 3.29 among their leads: 0
-UKB fitted weight of the all-zero configuration (estimated Sigma): 0.039
-Extrapolation flags (estimated Sigma): UKB t = 1: 0, t = 2: 230 of 414{,}391
-Monotone adjustment, t = 1: replication keeps 69% of variants and 86% of loci; pleiotropy 67% and 98%
-Replication loci, a_mu = 1.5: estimated Sigma 556, Sigma = I 1{,}694
-IQR-based SD of the fitting statistics: EUR_female 1.17; EUR_male 1.16; EAS_female 1.03; EAS_male 1.03; AFR_female 1.03; AFR_male 1.03; BMI 1.43; SBP 1.27; TG 1.25; HDL 1.28; HbA1c 1.27; HDL 1.40; LDL 1.23; TC 1.26; logTG 1.35; nonHDL 1.21

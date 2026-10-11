@@ -1,3 +1,0 @@
-variant	a_mu	t	n_features	n_triples	converged	loglik	fit_minutes	null_weight	R_raw	R_adj	triples_raw	loci_raw	loci_adj	extrap_flags
-noshare_robust_amu15	1.5	1	197890	27096	TRUE	-11.3242579315683	6.2	0.252380721699391	23702	20820	6791	1523	1455	0
-noshare_robust_amu15	1.5	2	197890	27096	TRUE	-11.3242579315683	6.2	0.252380721699391	23077	20162	6589	1497	1426	0

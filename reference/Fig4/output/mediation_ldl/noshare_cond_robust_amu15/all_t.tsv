@@ -1,6 +1,0 @@
-fit	t	n	R_raw	R_adj	strong_target_data	strong_target_loci_data	strong_target_rej	all_alpha_lt2	loci	loci_with_strong
-noshare_cond_robust_amu15	1	174620	16715	14334	448	127	400	10325	1321	127
-noshare_cond_robust_amu15	2	174620	16230	13825	272	79	234	10109	1283	79
-noshare_cond_robust_amu15	3	174620	8409	7896	131	42	116	5973	438	41
-noshare_cond_robust_amu15	4	174620	2952	1617	14	5	11	1959	311	4
-noshare_cond_robust_amu15	5	174620	13	13	0	0	0	0	6	0

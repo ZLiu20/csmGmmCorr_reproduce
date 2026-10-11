@@ -1,13 +1,12 @@
-#BSUB -J prep_medldl
-#BSUB -W 8:00
-#BSUB -o Data/errDir/prep_medldl.out
-#BSUB -e Data/errDir/prep_medldl.err
-#BSUB -q medium
-#BSUB -n 1
-#BSUB -R "span[hosts=1] rusage[mem=64]"
+#!/usr/bin/env bash
+#BSUB -J csm_prepare_med
+#BSUB -q long
+#BSUB -W 24:00
+#BSUB -n 4
 #BSUB -M 64
-
-# run 1   Submit from the repository root after bash Data/download_mediation_ldl.sh.
-# The GLGC LDL files are searched under $RAW_GLGC (default Data/raw/glgc).
+#BSUB -R "rusage[mem=64]"
+#BSUB -o Data/errDir/prepare_med_%J.out
+#BSUB -e Data/errDir/prepare_med_%J.err
+set -euo pipefail
 module load R/4.5.1
-Rscript Data/prepare_mediation_ldl.R Data/raw/mediation_ldl ${RAW_GLGC:-Data/raw/glgc}
+Rscript Data/prepare_mediation_ldl.R

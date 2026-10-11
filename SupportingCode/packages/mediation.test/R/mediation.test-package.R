@@ -1,12 +1,9 @@
-#' @keywords internal
-"_PACKAGE"
-
-## usethis namespace: start
-#' @importFrom dplyr mutate
-#' @importFrom lpSolve lp
-#' @importFrom R.methodsS3 setMethodS3
-#' @importFrom stringr str_extract
-#' @importFrom tidyr expand_grid
-#' @importFrom utils head
-## usethis namespace: end
+#' Tests for the product-null hypothesis in mediation analysis
+#'
+#' The package provides minimax and Bayes-risk procedures for paired mediation
+#' statistics and a Benjamini-Hochberg extension for simultaneous testing.
+#'
+#' @name mediation.test-package
+#' @aliases mediation.test
+#' @docType package
 NULL

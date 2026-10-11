@@ -1,3 +1,0 @@
-variant	a_mu	t	n_features	n_triples	converged	loglik	fit_minutes	null_weight	R_raw	R_adj	triples_raw	loci_raw	loci_adj	extrap_flags
-nearest_main	0.5	1	198740	26797	TRUE	-11.3080264643223	7.92	0.276114978439076	32888	23292	8421	2023	1731	4
-nearest_main	0.5	2	198740	26797	TRUE	-11.3080264643223	7.92	0.276114978439076	31808	22356	8131	1983	1694	4

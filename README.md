@@ -1,184 +1,148 @@
-# csmGmmCorr_reproduce
+# csmGmmCorr reproduction archive
 
-Code to reproduce the simulations, the data analyses, and every figure and table of the paper
-"Correlated csmGmm: Composite Null Testing and Posterior Ranking in Genome-Wide Studies" by Zili
-Liu and Ryan Sun,
-and of its Supplementary Material.
+This repository reproduces the simulations, data analyses, figures, and tables for
+*Correlated csmGmm: Composite Null Testing and Posterior Ranking in Genome-Wide
+Studies* and its Supplementary Material. The statistical method is provided by
+the separate `csmGmmCorr` R package (version 1.3.0); this repository contains only
+the reproducibility workflow and the comparison methods used in the paper.
 
-The method is implemented in the R package **csmGmmCorr** (version 1.3.0), which is in its own
-repository. This repository holds only the code that uses the package. It follows the layout of
-`csmGmm_reproduce` (Sun, McCaw and Lin, 2025).
+## Complete run
 
-## Reproducing everything in one run
+On an LSF login node with internet access, a fresh clone can be started with:
 
-On the cluster, in a fresh clone (login node with internet access):
-
+```bash
+git clone https://github.com/ZLiu20/csmGmmCorr_reproduce.git
+cd csmGmmCorr_reproduce
+mkdir -p logs
+nohup bash run_all.sh > logs/run_all.log 2>&1 &
 ```
-git clone https://github.com/ZLiu20/csmGmmCorr_reproduce.git csmGmmCorr_rerun && cd csmGmmCorr_rerun
-mkdir -p logs && nohup bash run_all.sh > logs/run_all.log 2>&1 &
+
+`run_all.sh` installs dependencies, compiles two native helper kernels, submits all
+simulation arrays, downloads public summary statistics, schedules the real-data
+analyses through LSF dependencies, and finally runs `make_all.sh`. Finished
+replicates are detected by their CSV files, so the same command can resume an
+interrupted run without regenerating completed work.
+
+Useful modes are:
+
+```bash
+bash run_all.sh status
+bash run_all.sh final
+bash run_all.sh make
+DRYRUN=1 bash run_all.sh
 ```
 
-`run_all.sh` runs `setup.R`, submits all simulation arrays, downloads the summary statistics
-(about 45 GB) while the simulations run, submits the data preparation and the application fits
-with LSF dependencies, and submits a final job that waits for everything, runs `make_all.sh`
-(every `plot_` and `make_` script) and `tests/verify.R`. The report `logs/verify_report.txt`
-compares every regenerated table, and the numbers behind every figure, with the values of the
-paper in `reference/`: IDENTICAL, EQUAL (within a relative tolerance of 1e-6), CLOSE (every
-number within 1% relative or 0.005 absolute), DIFFERENT or MISSING. It also compares the R and
-package versions with `reference/versions.txt`.
+Simulation seeds depend only on scenario, design, dimension, threshold, replicate,
+and data role. Every method evaluated in the same cell therefore receives the same
+generated data. Floating-point reductions can differ slightly across machines or
+thread schedules; the numerical tolerances used by the validation scripts account
+for such changes.
 
-- `bash run_all.sh status` shows the progress; repeating `bash run_all.sh` resumes (finished
-  replicates and fits are skipped; `RERUN=1` refits the applications).
-- After resubmitting failed tasks, `bash run_all.sh final` submits the final job again.
-- Every simulation replicate regenerates its data from fixed seeds, so the data do not depend on
-  the order or the nodes on which the jobs run. The fits run with several threads, and the order
-  of the floating-point sums can differ between runs, so a refit can differ in the last digits of
-  the parameters. A complete rerun of the paper (October 2026) gave the same rejections in 97% to
-  100% of the replicates of every simulation array, and the table entries of the penalized
-  estimator differed from the earlier run by at most 0.004. Larger changes occurred for the
-  unpenalized maximum likelihood fit, whose likelihood has several local maxima, for the
-  MediationTest comparator at the largest effect sizes, whose p-value computation was made robust
-  to equal capped statistics after the earlier run, and in run-time and iteration counts. The
-  values in `reference/` are those of the complete rerun. Expect CLOSE rather than IDENTICAL for
-  most files.
-- The simulations take most of the time: about 18,000 tasks of up to 16 hours each (see the
-  table of wall times below), so the total time depends mainly on how many tasks the cluster
-  runs at once.
+## Setup and execution
 
-## Overview
+Install the R dependencies and compile the native helpers once:
 
-- Run all commands from the repository root, or from any folder inside it. File locations are
-  resolved with the `here` package.
-- Set up once (for example on the login node of the cluster):
+```bash
+Rscript setup.R
+```
 
-  ```
-  Rscript setup.R
-  ```
+A local package archive can be supplied as the first argument or through
+`CSMGMMCORR_SRC`. Otherwise, setup installs `ZLiu20/csmGmmCorr` from GitHub. Package
+versions are recorded in `logs/versions.txt`.
 
-  This installs csmGmmCorr (from GitHub, repository `ZLiu20/csmGmmCorr` unless `CSMGMMCORR_REPO` is set, or from a local copy with
-  `Rscript setup.R /path/to/csmGmmCorr_1.3.0.tar.gz`, or `CSMGMMCORR_SRC=<that path>`) and the
-  packages of the comparison methods. It also
-  compiles two small kernels in `SupportingCode/src` and checks them against the package.
-- The code is written for a cluster with the LSF scheduler.
-- There is one folder per figure or table. When a figure or table has no folder of its own,
-  its code is in the preceding folder (see the table below). For example, Supplementary
-  Figures 1-12 are all made in `SuppFig1`, and Figure 5 is made in `Fig4`.
-- Running the computations in a folder:
-  - Each simulation array of a folder has a script `<array>_sim.R` and a batch file
-    `run_<array>.lsf`.
-  - Submit every `.lsf` file of the folder from the repository root, e.g.
-    `bsub < Fig2/run_main_ours_pl_pen.lsf`, and wait until all jobs have finished.
-  - The comment `# run 1-N` in each `.lsf` file gives the number of tasks. Queue names, memory
-    units and the R module name may need to be adapted to your cluster.
-- Making the figures and tables: each folder has scripts that start with `plot_` or `make_`.
-  Run them with `Rscript` once the jobs have finished. Their PDF and LaTeX output is written
-  into the folder.
-- Simulation output:
-  - Each replicate writes one CSV file to `<folder>/output/<study>/<method type>/`, with one row
-    per target, threshold t and method.
-  - A resubmitted task skips replicates that are already on disk.
-  - Every replicate regenerates its data from fixed seeds (`sim_seed()` in
-    `SupportingCode/sim_data.R`), so no data files are stored.
-- Testing: setting `SIM_N=2000` (features per data set) writes to `output_smoke/` instead and is
-  for testing only. `bash tests/test_all.sh submit` runs one replicate of every array in this
-  way.
-- Run times:
-  - Each simulation task runs 10 replicates of 100,000 features.
-  - With 4 threads, the penalized fit of one replicate took a median of about 0.5 minutes at
-    K = 4 and 1.5 minutes at K = 6; maximum likelihood took about three times as long. The
-    generation of the data takes under a minute (pleiotropy, replication) to about 3 minutes
-    (mediation) per replicate.
-  - The `-W` values in the `.lsf` files are upper bounds per task. The total time of a folder
-    depends on how many tasks run at once (at most 200 per array, set by `%200`).
+Every simulation array has an R entry point named `<array>_sim.R` and an LSF file
+named `run_<array>.lsf`. Submit from the repository root, for example:
+
+```bash
+bsub < Fig2/run_main_ours_pl_pen.lsf
+```
+
+Each array task covers ten consecutive replicates of a single `(design, K, t)`
+cell. The default experiment uses 100,000 features. For a local smoke run, set
+`SIM_N=2000`; smoke output is isolated under `output_smoke/`. `SIM_MAX_REPS` limits
+the number of replicates executed by one task, and `MAX_ITER` overrides the fitting
+iteration cap.
 
 ## Figures and tables
 
-| Paper | Folder | Arrays (tasks) | Script |
-|---|---|---|---|
-| Figure 1 (Example 1, Sections 3.1 and 4.1) | Fig1 | none (exact computation, seconds) | plot_fig1.R |
-| Figure 2 | Fig2 | 14 arrays (12,000 tasks): penalized fit (500 replicates), ML fit, sign-symmetric statistics, QCH/adaFilter, DEI/MediationTest/JS-PC | plot_fig2.R |
-| Table 1 | Tab1 | uses Fig2 | make_tab1.R |
-| Figure 3 | Fig3 | 9 arrays (2,400 tasks): correlation study, penalized and ML fits, csmGmm | plot_fig3.R |
-| Table 2 | Tab2 | 16 arrays (2,440 tasks): csmGmm comparison, quantitative outcomes, exchangeable correlation, linkage disequilibrium, independent test set, null-correlation oracle; uses Fig2 and Fig3 | make_tab2.R |
-| Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/` | make_tab3.R, plot_fig4.R, plot_fig5.R, holdout_validation.R |
-| Mediation application (Supplementary Section 8.7) | Fig4 | `run_mediation_ldl.lsf` (23 fits), `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`; requires `Data/` (LDL mediation) | summarize_mediation_ldl.R, diagnose_mediation_ldl.R |
-| Supplementary Figures 1-12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
-| Supplementary Table 1 | none | roadmap, text only | |
-| Supplementary Table 2 | SuppTab2 | none (exact counts) | make_supptab2.R |
-| Supplementary Table 3 | SuppTab3 | 18 arrays (720 tasks): penalty constants | make_supptab3.R |
-| Supplementary Table 4 | SuppTab4 | `run_SuppTab4.lsf` (10 tasks): weight floors | make_supptab4.R |
-| Supplementary Table 5 | SuppTab5 | none (design table) | make_supptab5.R |
-| Supplementary Tables 6-8 | SuppTab6 | uses Fig2, Fig3 | make_supptab6_8.R |
-| Supplementary Table 9 | SuppTab9 | 6 arrays (240 tasks): numbers of magnitude components | make_supptab9.R |
-| Supplementary Tables 10-11 | SuppTab10 | uses Tab2, Fig2, Fig3 | make_supptab10_11.R |
-| Supplementary Tables 12-15 | SuppTab12 | 1 array (480 tasks): repfdr and directional PC; uses Fig2, Fig3, Tab2 | make_supptab12_15.R |
-| Supplementary Tables 16-18 | SuppTab16 | uses Fig2 | make_supptab16_18.R |
-| Supplementary Tables 19-23 | SuppTab19 | uses Fig4 | make_supptab19_23.R |
-| Supplementary Tables 24-26 | SuppTab24 | uses Fig4 LDL mediation (`run_mediation_ldl.lsf`, `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`) | make_supptab24_26.R |
-| Package checks (Supplementary Section 2.7) | Validation | none | validate_csmgmm.R, validate2_csmgmm.R, diag_incon.R |
+The major products are organized as follows.
 
-Upper bounds on the wall time per task (`-W`):
+| Paper item | Folder | Main purpose |
+|---|---|---|
+| Figure 1 | `Fig1` | Exact illustration of posterior ranking |
+| Figure 2 | `Fig2` | Main and symmetric simulations for all three targets |
+| Table 1 | `Tab1` | Design summary |
+| Figure 3 | `Fig3` | Correlation sensitivity |
+| Table 2 | `Tab2` | Alternative estimators and data-generating mechanisms |
+| Tables 3 and Figures 4--5 | `Fig4` | Real-data and holdout analyses |
+| Supplementary Figures 1--12 | `SuppFig1` | Additional simulation panels |
+| Supplementary Tables 2--26 | `SuppTab*` | Counts, sensitivity analyses, and diagnostics |
+| Package validation | `Validation` | Comparison with the independent `csmGmm` implementation |
 
-| Folder | Upper bound per task |
-|---|---|
-| Fig2 | 16 hours |
-| Fig3, Tab2, SuppTab3, SuppTab12 | 12 hours |
-| SuppTab9 | 16 hours |
-| SuppTab4 | 4 hours |
-| Fig4 | 23 hours, after the data preparation (8 hours) |
+Once all required jobs finish, run:
 
-All other scripts finish in minutes.
-
-## Data (applications)
-
-The applications use public summary statistics:
-
-- the Global Lipids Genetics Consortium (GLGC, 2021) trans-ancestry lipid results;
-- the GLGC LDL-cholesterol results of ten ancestry-by-sex strata;
-- the round-2 UK Biobank GWAS of the Neale laboratory.
-
-Prepare them as follows (see `Data/README.md`):
-
-```
-bash Data/download_data.sh          # about 25 GB
-bsub < Data/run_prepare.lsf         # GLGC replication, GLGC lipids, UK Biobank
-bsub < Fig4/run_realdata.lsf        # 13 fits
+```bash
+bash make_all.sh
 ```
 
-## Repository structure
+The script rebuilds cached summaries, runs every plotting/table program in isolation,
+and writes one log per program under `logs/make/`. A failure is reported but does not
+prevent the remaining products from being attempted.
 
+## Simulation design
+
+The primary experiments use `n=1000` subjects, 100,000 variants, dimensions
+`K=4,6`, thresholds `t=1,2`, and correlated outcomes or mediator errors. The main
+latent dependence is AR(1) with correlation 0.2. Additional studies use symmetric
+statistics, quantitative outcomes, exchangeable correlation 0.4, stronger
+correlation, linked genotypes, and independent test data. Penalized and maximum-
+likelihood correlated csmGmm fits are compared with target-appropriate methods:
+QCH and adaFilter for pleiotropy, repfdr and directional partial conjunction for
+replication, and DEI, MediationTest, and a parameter-free pathway safeguard for
+mediation.
+
+Approximate run-time ceilings per array task are 16 hours for the heaviest Figure 2
+and component-sensitivity fits, 12 hours for the remaining simulation arrays, four
+hours for the weight-floor study, and up to 23 hours for real-data fits after data
+preparation. Actual elapsed time depends strongly on cluster concurrency.
+
+## Public data
+
+The applications use public summary statistics from the Global Lipids Genetics
+Consortium, ten ancestry-by-sex LDL-C strata, the Neale Laboratory UK Biobank GWAS,
+GTEx liver eQTL resources, and 1000 Genomes reference data. The preparation entry
+points are:
+
+```bash
+bash Data/download_data.sh
+bsub < Data/run_prepare.lsf
+bsub < Fig4/run_realdata.lsf
 ```
-SupportingCode/      code sourced by all scripts (load_all.R)
-  sim_data.R           data generation, designs and seeds of all simulation studies
-  sim_tasks.R          the simulation arrays: folder, study, method, designs, replicates, resources
-  run_sim_task.R       one task: data, fits, decisions, FDP, power and incongruity counts
-  comparators/         QCH, adaFilter, repfdr, directional PC, DEI, MediationTest, JS-PC
-  incongruity.R        incongruity counts (score and decision level)
-  floor_study.R        weight-floor study (Supplementary Section 2.6)
-  realdata.R           applications: loading, fitting, inference, clumping
-  glgc_prepare.R       preparation of the GLGC statistics
-  summarize.R          reading and summarizing the simulation output, table helpers
-  plot_style.R         common figure style (colors and line types fixed per method)
-  src/                 C++ kernels: monotone adjustment and incongruity for millions of
-                       variants; BLAKE2b hash for the GLGC fitting sample
-  packages/            mediation.test (Chambaz and Miles), used by the MediationTest comparator
-Data/                download and preparation of the summary statistics
-Fig1, Fig2, ...      one folder per figure or table (see above)
-Validation/          comparison of csmGmmCorr with Sun et al.'s csmGmm package
-tests/               syntax check and smoke test (tests/test_all.sh)
-```
 
-## Software
+See `Data/README.md` for file-level sources, checks, and expected outputs. Raw data
+are not committed to this repository.
 
-The paper was produced with:
+## Repository map
 
-- R 4.5.1 and csmGmmCorr 1.3.0;
-- data.table, ggplot2, cowplot and here;
-- qch, repfdr and mediation.test for the comparison methods. adaFilter uses the
-  implementation in `SupportingCode/comparators/adafilter.R` when the package is not installed.
+- `SupportingCode/sim_data.R`: designs, seeds, subject-level generation, and truth.
+- `SupportingCode/sim_tasks.R`: all simulation arrays and LSF task grids.
+- `SupportingCode/run_sim_task.R`: fitting, decisions, performance, and diagnostics.
+- `SupportingCode/comparators/`: target-specific comparison methods.
+- `SupportingCode/incongruity.R`: decision- and score-level incongruity counts.
+- `SupportingCode/summarize.R`: output aggregation and table helpers.
+- `SupportingCode/realdata.R`: real-data fitting and inference.
+- `SupportingCode/glgc_prepare.R`: GLGC harmonization utilities.
+- `SupportingCode/floor_study.R`: the mixture-weight floor experiment.
+- `SupportingCode/src/`: native kernels for large-scale adjustment and hashing.
+- `Data/`: downloads and preparation.
+- `Validation/`: numerical comparisons with Sun et al.'s `csmGmm` package.
+- `tests/`: syntax, preparation, and smoke checks.
 
-The computations ran on the Seadragon cluster of MD Anderson Cancer Center (LSF).
+The reference software environment is R 4.5.1 with `csmGmmCorr` 1.3.0. The
+computations described in the paper were run under LSF on the Seadragon cluster at
+MD Anderson Cancer Center.
 
 ## License
 
-MIT (see LICENSE). `SupportingCode/packages/mediation.test` keeps its own MIT license.
+The repository is distributed under the MIT License. The bundled
+`SupportingCode/packages/mediation.test` source retains its own license notices.

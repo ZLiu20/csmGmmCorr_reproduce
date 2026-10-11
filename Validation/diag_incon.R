@@ -1,80 +1,76 @@
-# Diagnosis of the incongruous results of the correlated csmGmm :
-#   Rscript Validation/diag_incon.R            -> Validation/diag_incon_log.txt
-# For one replicate of three designs with many incongruous results (K = 4, t = 1):
-#  1. our count (R/incongruity.R) and csmGmm::check_incongruous (Sun's code) on the same scores;
-#  2. the flagged features: size of the score differences, truncated statistics, sign patterns;
-#  3. the same data refitted with Sigma = I (independence), to separate the effect of the
-#     correlation from that of the model structure and the target (t < K - 1);
-#  4. the target t = K - 1, for which Sun et al.'s ordering result applies.
 here::i_am("Validation/diag_incon.R")
-if (!requireNamespace("csmGmm", quietly = TRUE)) remotes::install_github("ryanrsun/csmGmm@4a03af5", upgrade = "never")
-suppressMessages({ library(csmGmm); library(csmGmmCorr) })
+suppressPackageStartupMessages(library(csmGmmCorr))
 source(here::here("SupportingCode", "load_all.R"))
-log <- here::here("Validation", "diag_incon_log.txt"); cat("", file = log)
-say <- function(...) { cat(..., "\n", file = log, append = TRUE); cat(..., "\n") }
-N <- as.integer(Sys.getenv("SIM_N", "100000")); cores <- as.integer(Sys.getenv("CORES", "4"))
 
-# flagged features (Sun's definition) with the largest score difference to a dominated feature
-incon_detail <- function(Z, s, target, t, max_n = 5000L) {
-  keep <- which(is.finite(s) & s < 0.99)
-  keep <- keep[order(s[keep])][seq_len(min(length(keep), max_n))]
-  rp <- .incon_repr(Z[keep, , drop = FALSE], target, t); W <- rp$w; K <- ncol(W); sc <- s[keep]
-  out <- NULL
-  for (gr in unique(rp$group)) {
-    m <- which(rp$group == gr); if (length(m) < 2L) next
-    m <- m[do.call(order, c(list(sc[m]), lapply(seq_len(K), function(k) -W[m, k])))]
-    for (i in 2:length(m)) {
-      prev <- m[seq_len(i - 1L)]; wi <- rep(W[m[i], ], each = length(prev))
-      dom <- rowSums(W[prev, , drop = FALSE] <= wi) == K & rowSums(W[prev, , drop = FALSE] < wi) > 0
-      if (any(dom)) {
-        j <- prev[dom][which.min(sc[prev[dom]])]
-        out <- rbind(out, data.frame(i = keep[m[i]], j = keep[j], s_i = sc[m[i]], s_j = sc[j]))
-      }
-    }
+log_file <- here::here("Validation", "diag_incon_log.txt")
+cat("", file = log_file)
+say <- function(...) {
+  line <- paste0(..., collapse = "")
+  cat(line, "\n")
+  cat(line, "\n", file = log_file, append = TRUE)
+}
+
+N <- as.integer(Sys.getenv("SIM_N", "100000"))
+cores <- as.integer(Sys.getenv("CORES", "1"))
+max_iter <- as.integer(Sys.getenv("DIAG_MAX_ITER", "1500"))
+if (!is.finite(N) || N < 500L) stop("SIM_N must be at least 500")
+if (!is.finite(cores) || cores < 1L) stop("CORES must be positive")
+if (!is.finite(max_iter) || max_iter < 2L) stop("DIAG_MAX_ITER must be at least two")
+
+fit_case <- function(z, K, fixed = FALSE) {
+  spec <- csm_spec(K, M = csm_structure(K, 2L, 1L), S = K, b_mu = 15)
+  csm_fit(
+    z, spec, starts = c("null", "shared"),
+    control = csm_control(
+      cores = cores, max_iter = max_iter,
+      fix_sigma = fixed
+    )
+  )
+}
+
+cases <- list(
+  list(scen = "pl", design = 7L, target = "pleiotropy", t = 1L),
+  list(scen = "rp", design = 9L, target = "replication", t = 1L),
+  list(scen = "med", design = 6L, target = "mediation", t = 1L)
+)
+
+for (case in cases) {
+  K <- 4L
+  set.seed(sim_seed(11L, case$design, K, case$t, 1L, 1L))
+  generated <- make_dataset(case$scen, case$design, K, case$t, 1L, N = N)$train
+  z <- generated$Z
+  estimated <- fit_case(z, K, FALSE)
+  stopifnot(!is.null(estimated$params))
+  raw <- csm_lfdr(estimated, z, case$target, case$t, cores = cores)
+  raw_rejected <- csm_stepup(raw, 0.1)$rejected
+  raw_score <- incon_score(z, raw, case$target, case$t)
+  raw_decision <- incon_decision(z, raw_rejected, case$target, case$t)
+
+  adjusted <- csm_adjust(z, raw, case$target, case$t, q = 0.1, all = TRUE)
+  adjusted_score <- incon_score(z, adjusted$adjusted, case$target, case$t)
+  adjusted_decision <- incon_decision(z, adjusted$rejected, case$target, case$t)
+
+  independent <- fit_case(z, K, TRUE)
+  independent_lfdr <- csm_lfdr(independent, z, case$target, case$t, cores = cores)
+  independent_score <- incon_score(z, independent_lfdr, case$target, case$t)
+
+  t_boundary <- K - 1L
+  boundary_lfdr <- csm_lfdr(estimated, z, case$target, t_boundary, cores = cores)
+  boundary_score <- incon_score(z, boundary_lfdr, case$target, t_boundary)
+
+  say(sprintf(paste0("%s: raw score=%s, raw decision=%d; majorant score=%s, ",
+                     "majorant decision=%d; fixed-Sigma score=%s; t=K-1 score=%s"),
+              case$target, raw_score, raw_decision,
+              adjusted_score, adjusted_decision,
+              independent_score, boundary_score))
+  stopifnot(adjusted_score == 0L, adjusted_decision == 0L)
+
+  if (requireNamespace("csmGmm", quietly = TRUE) && K <= 3L) {
+    upstream <- csmGmm::check_incongruous(z, raw)
+    say("upstream orthant diagnostic count=", length(upstream))
+  } else {
+    say("upstream orthant diagnostic skipped: it supports only K=2 or K=3")
   }
-  out
 }
-fitB <- function(Z, K, fix = FALSE) {
-  sp <- csm_spec(K, M = csm_structure(K, 2L, 1L), b_mu = 15)
-  csm_fit(Z, sp, starts = c("null", "shared"), control = csm_control(cores = cores, max_iter = 1500, fix_sigma = fix))
-}
-cases <- list(list(scen = "pl", d = 7L, target = "pleiotropy", name = "pleiotropy tau1 = 0.02"),
-              list(scen = "rp", d = 9L, target = "replication", name = "replication tau1 = 0.04"),
-              list(scen = "med", d = 6L, target = "mediation", name = "mediation tau1 = 0.02"))
-K <- 4L; t <- 1L
-for (cs in cases) {
-  dat <- make_dataset(cs$scen, cs$d, K, if (cs$scen == "med") t else 0L, 1L, N)$train
-  Z <- dat$Z
-  say(sprintf("==== %s, K = %d, t = %d, replicate 1 ====", cs$name, K, t))
-  f <- fitB(Z, K)
-  say(sprintf("fit: converged %s; Sigma off-diagonal %s", f$converged,
-              paste(sprintf("%.3f", f$params$Sigma[upper.tri(f$params$Sigma)]), collapse = " ")))
-  lf <- csm_lfdr(f, Z, cs$target, t, cores = cores)
-  rej <- csm_stepup(lf, 0.1)$rejected
-  ours <- incon_score(Z, lf, cs$target, t)
-  keep <- which(lf < 0.99); keep <- keep[order(lf[keep])][seq_len(min(length(keep), 5000L))]
-  sun <- tryCatch(length(check_incongruous(Z[keep, ], lf[keep])), error = function(e) NA)
-  say(sprintf("1. incongruous: ours %d; csmGmm::check_incongruous on the same 5000 scores %s (orthant order; differs for replication by design)",
-              ours, as.character(sun)))
-  dd <- incon_detail(Z, lf, cs$target, t)
-  if (!is.null(dd) && nrow(dd)) {
-    gap <- dd$s_i - dd$s_j
-    trunc <- rowSums(abs(Z[dd$i, , drop = FALSE]) >= 8.1 - 1e-9) > 0
-    say(sprintf("2. flagged %d: score difference quantiles (50/90/100%%) %.2e / %.2e / %.2e; below 1e-6: %d; lfdr of flagged median %.3f; rejected %d; truncated |z| = 8.1: %d",
-                nrow(dd), quantile(gap, .5), quantile(gap, .9), max(gap), sum(gap < 1e-6), median(dd$s_i), sum(rej[dd$i]), sum(trunc)))
-    sz <- rowSums(dat$H[dd$i, , drop = FALSE] != 0)
-    say(sprintf("   true support sizes of flagged features: %s", paste(names(table(sz)), table(sz), sep = ":", collapse = " ")))
-    ex <- head(dd[order(-(dd$s_i - dd$s_j)), ], 5)
-    for (r in seq_len(nrow(ex))) say(sprintf("   e.g. z_i = (%s), lfdr %.4f  dominates  z_j = (%s), lfdr %.4f",
-      paste(sprintf("%.2f", Z[ex$i[r], ]), collapse = ", "), ex$s_i[r], paste(sprintf("%.2f", Z[ex$j[r], ]), collapse = ", "), ex$s_j[r]))
-  }
-  fI <- fitB(Z, K, fix = TRUE)
-  lfI <- csm_lfdr(fI, Z, cs$target, t, cores = cores)
-  say(sprintf("3. Sigma fixed at I: incongruous %d (rejections %d vs %d with Sigma estimated)",
-              incon_score(Z, lfI, cs$target, t), sum(csm_stepup(lfI, 0.1)$rejected), sum(rej)))
-  tg2 <- if (cs$target == "mediation") "mediation" else cs$target
-  lf3 <- csm_lfdr(f, Z, tg2, K - 1L, cores = cores); lf3I <- csm_lfdr(fI, Z, tg2, K - 1L, cores = cores)
-  say(sprintf("4. target t = K - 1 = %d: incongruous %d (Sigma estimated), %d (Sigma = I)",
-              K - 1L, incon_score(Z, lf3, tg2, K - 1L), incon_score(Z, lf3I, tg2, K - 1L)))
-}
-say("DIAGNOSIS DONE")
+
+say("DIAGNOSIS_DONE")
