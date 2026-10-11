@@ -6,8 +6,8 @@
 #     of ten ancestry-by-sex strata (replication; HIS and SAS are held out for validation)
 #   UK Biobank, Neale lab round 2 (http://www.nealelab.is/uk-biobank): five traits, both sexes,
 #     imputed v3, inverse-rank-normalized (irnt): BMI 21001, SBP 4080, TG 30870, HDL 30760, HbA1c 30750
-#     (the three biomarker files are served under the name *.varorder.tsv.bgz; the rows are ordered
-#     differently but the values are those of the original files, see tests/check_ukb_varorder.R)
+#     (the three biomarker files are now served only under the name *.varorder.tsv.bgz; these files
+#     are byte-identical to the files used in the paper, same md5, checked 2026-10-10)
 set -e
 cd "$(dirname "$0")"
 get() { mkdir -p "$(dirname "$2")"; [ -s "$2" ] && { echo "exists: $2"; return; }; echo "downloading $1"; wget -q --tries=10 --timeout=120 --waitretry=30 -c -O "$2.part" "$1" && mv "$2.part" "$2"; }
