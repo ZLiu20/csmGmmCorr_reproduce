@@ -1,6 +1,9 @@
-# Simulation entry point for sym_ours_med_pen.
+# Fig2: sign-symmetric statistics (logistic intercept 0); mediation;
+# correlated csmGmm, penalized.
+# Designs 1-12, K = 4 and 6, replicates 1-200; one task = 10 replicates of one
+# (design, K, t) cell, 960 tasks. Output: Fig2/output/sym/ours_med_pen/
+#   Rscript Fig2/sym_ours_med_pen_sim.R <task 1-960>        (or bsub < Fig2/run_sym_ours_med_pen.lsf)
 here::i_am("Fig2/sym_ours_med_pen_sim.R")
 source(here::here("SupportingCode", "load_all.R"))
-args <- commandArgs(trailingOnly = TRUE)
-if (!length(args)) stop("An LSF task index is required")
-run_sim_task("sym_ours_med_pen", as.integer(args[[1L]]))
+aID <- as.integer(commandArgs(trailingOnly = TRUE)[1])
+run_sim_task("sym_ours_med_pen", aID)

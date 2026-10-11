@@ -1,265 +1,204 @@
+# Mediation application with G = 3 mediators (the model of main-text Section 2.1, K = 2G = 6):
+#   exposure = a genetic variant (SNP), M1, M2, M3 = the liver expression of three genes near it,
+#   outcome Y = LDL cholesterol. One feature per variant, coordinates in mediation order
+#   (alpha1, beta1, alpha2, beta2, alpha3, beta3):
+#     alpha_g : SNP -> M_g, liver cis-eQTL z of the variant for gene g (beta / se, ALT allele): GTEx v10
+#               liver, all tested variant-gene pairs as reprocessed by the eQTL Catalogue (QTD000266, n = 261)
+#     beta_g  : M_g -> Y,   S-PrediXcan z of gene g (GTEx v8 MASHR liver model, GLGC EUR LDL)
+#   With G = 3, t = 1 and t = 2 are both mediation targets (for t >= G the mediation and
+#   pleiotropy nulls coincide; main-text Section 2.1).
+#   The genes are chosen from positions only: among the genes with a liver model that were tested
+#   with the variant, ordered by the distance of their transcription start site to the variant,
+#   rule "nearest" takes the first three; rule "noshare" (the primary data set) takes the nearest
+#   gene and then, in order, each gene whose model shares no variant with the models already
+#   chosen (with a shared model variant two S-PrediXcan statistics are partly the same statistic).
+#   The variants are chosen from positions only: common SNVs (GTEx MAF >= 0.05) with at least three
+#   such genes; in each 10-kb window the variant nearest to the middle of the window. No statistic
+#   is used to choose features.
+#   LDL: GLGC 2021 EUR female and male results combined by inverse-variance weighting; variants
+#   are matched to GTEx on the build-37 position and both alleles (GTEx lookup table).
+#   S-PrediXcan: z_g = sum_l w_l s_l z_l / s_g, s_l^2 = Gamma_ll, s_g^2 = w' Gamma w over the model
+#   variants with an LDL statistic (Gamma = the covariance file of the MASHR model).
+# Usage (from the repository root, after bash Data/download_mediation_ldl.sh):
+#   Rscript Data/prepare_mediation_ldl.R [<folder of the GTEx and MASHR files>] [<folder that contains the GLGC LDL files>]
+#   defaults: Data/raw/mediation_ldl and Data/raw/glgc (searched recursively)
+# Output: Data/mediation/ldl_twas_liver.tsv.gz, Data/mediation/mediation_ldl_liver_{noshare,nearest}.tsv.gz,
+#   intermediate files in Data/prepared/mediation_ldl/ (resumable: finished steps are skipped).
 here::i_am("Data/prepare_mediation_ldl.R")
-suppressPackageStartupMessages(library(data.table))
+suppressMessages(library(data.table))
+say <- function(...) { cat(format(Sys.time(), "%H:%M:%S"), sprintf(...), "\n"); flush.console() }
+a <- commandArgs(trailingOnly = TRUE)
+src  <- if (length(a) >= 1) a[1] else here::here("Data", "raw", "mediation_ldl")
+groot <- if (length(a) >= 2) a[2] else here::here("Data", "raw", "glgc")
+root <- Sys.getenv("MEDLDL_OUT", here::here("Data"))    # tests/test_prepare_mediation_ldl.R writes elsewhere
+tmp <- file.path(root, "prepared", "mediation_ldl"); dir.create(tmp, recursive = TRUE, showWarnings = FALSE)
+odir <- file.path(root, "mediation"); dir.create(odir, recursive = TRUE, showWarnings = FALSE)
+f_pairs <- file.path(src, "QTD000266.all.tsv.gz"); f_gtf <- file.path(src, "gencode.v26.GRCh38.genes.gtf")
+f_look <- file.path(src, "GTEx_v8_lookup_table.txt.gz")
+f_db <- file.path(src, "mashr_Liver.db"); f_cov <- file.path(src, "mashr_Liver.txt.gz")
+for (f in c(f_pairs, f_gtf, f_look, f_db, f_cov)) if (!file.exists(f)) stop("missing input: ", f)
+find1 <- function(pat) { x <- list.files(groot, pattern = pat, recursive = TRUE, full.names = TRUE); if (!length(x)) stop("not found under ", groot, ": ", pat); x[1] }
+f_ldl <- c(female = find1("^LDL_INV_EUR_HRC_1KGP3_others_FEMALE\\.meta\\.singlevar\\.results\\.gz$"),
+           male   = find1("^LDL_INV_EUR_HRC_1KGP3_others_MALE\\.meta\\.singlevar\\.results\\.gz$"))
+zcat <- function(f) paste("gzip -cd", shQuote(f))
+strip <- function(g) sub("\\..*$", "", g)
+say("inputs: %s ; LDL: %s", src, paste(f_ldl, collapse = ", "))
 
-say <- function(...) {
-  cat(format(Sys.time(), "%H:%M:%S"), sprintf(...), "\n")
-  flush.console()
-}
-args <- commandArgs(trailingOnly = TRUE)
-source_root <- if (length(args)) args[1L] else here::here("Data", "raw", "mediation_ldl")
-glgc_root <- if (length(args) >= 2L) args[2L] else here::here("Data", "raw", "glgc")
-prepared_root <- Sys.getenv("MEDLDL_OUT", here::here("Data"))
-work_dir <- file.path(prepared_root, "prepared", "mediation_ldl")
-output_dir <- file.path(prepared_root, "mediation")
-dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
-dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
-
-input <- function(name) file.path(source_root, name)
-pair_file <- input("QTD000266.all.tsv.gz")
-gtf_file <- input("gencode.v26.GRCh38.genes.gtf")
-lookup_file <- input("GTEx_v8_lookup_table.txt.gz")
-model_db <- input("mashr_liver.db")
-covariance_file <- input("mashr_liver.txt.gz")
-required <- c(pair_file, gtf_file, lookup_file, model_db, covariance_file)
-missing <- required[!file.exists(required)]
-if (length(missing)) stop("Missing mediation input: ", paste(missing, collapse = ", "))
-
-find_glgc <- function(pattern) {
-  hits <- list.files(glgc_root, pattern = pattern, recursive = TRUE,
-                     full.names = TRUE, ignore.case = TRUE)
-  if (!length(hits)) stop("GLGC LDL input not found for pattern: ", pattern)
-  hits[1L]
-}
-ldl_files <- c(
-  female = find_glgc("LDL.*EUR.*FEMALE.*singlevar.*[.]gz$"),
-  male = find_glgc("LDL.*EUR.*MALE.*singlevar.*[.]gz$")
-)
-
-read_model_table <- function(table) {
+# ---- 1. liver MASHR model --------------------------------------------------------------------
+read_table <- function(db, tab) {
   if (requireNamespace("RSQLite", quietly = TRUE)) {
-    connection <- DBI::dbConnect(RSQLite::SQLite(), model_db)
-    on.exit(DBI::dbDisconnect(connection))
-    return(as.data.table(DBI::dbReadTable(connection, table)))
+    con <- DBI::dbConnect(RSQLite::SQLite(), db); on.exit(DBI::dbDisconnect(con))
+    as.data.table(DBI::dbReadTable(con, tab))
+  } else fread(cmd = sprintf("sqlite3 -header -csv %s 'select * from %s'", shQuote(db), tab))
+}
+W <- read_table(f_db, "weights"); E <- read_table(f_db, "extra")
+say("MASHR weights: %d rows, columns %s", nrow(W), paste(names(W), collapse = ","))
+say("MASHR extra: %d genes, columns %s", nrow(E), paste(names(E), collapse = ","))
+vcol <- if ("varID" %in% names(W)) "varID" else "rsid"
+W <- W[, .(gene = as.character(gene), var = as.character(get(vcol)), eff = toupper(eff_allele), w = as.numeric(weight))]
+if (!all(grepl("^chr[0-9XY]+_[0-9]+_[ACGT]+_[ACGT]+_b38$", head(W$var, 1000))))
+  stop("unexpected model variant IDs, e.g. ", paste(head(W$var, 3), collapse = " "))
+E <- E[, .(gene = as.character(gene), gene_name = as.character(genename))]
+W[, c("ref38", "alt38") := tstrsplit(var, "_", keep = 3:4)]
+
+# ---- 2. LDL statistics of the model variants (GLGC EUR, female and male combined) -----------
+f_gw <- file.path(tmp, "ldl_model_variants.tsv.gz")
+if (!file.exists(f_gw)) {
+  vars <- unique(W$var)
+  look <- fread(cmd = zcat(f_look), select = c("variant_id", "variant_id_b37"))
+  look <- look[variant_id %chin% vars & !is.na(variant_id_b37) & nzchar(variant_id_b37)]
+  look[, c("chr37", "pos37", "ref37", "alt37") := tstrsplit(variant_id_b37, "_", keep = 1:4)]
+  look[, key := paste(chr37, pos37, sep = ":")]
+  say("model variants: %d, with a build-37 position: %d", length(vars), nrow(look))
+  rd <- function(f) {
+    x <- fread(cmd = zcat(f), select = c("CHROM", "POS_b37", "REF", "ALT", "EFFECT_SIZE", "SE"), colClasses = list(character = c("CHROM", "REF", "ALT")))
+    x[, key := paste(sub("^chr", "", CHROM), as.integer(POS_b37), sep = ":")]
+    x <- x[key %chin% look$key & is.finite(as.numeric(EFFECT_SIZE)) & as.numeric(SE) > 0]
+    x[, .(key, REF = toupper(REF), ALT = toupper(ALT), b = as.numeric(EFFECT_SIZE), s = as.numeric(SE))]
   }
-  command <- sprintf("sqlite3 -header -csv %s %s",
-                     shQuote(model_db), shQuote(sprintf("select * from %s;", table)))
-  fread(cmd = command)
+  L <- merge(rd(f_ldl["female"]), rd(f_ldl["male"]), by = c("key", "REF", "ALT"), all = TRUE, suffixes = c("_f", "_m"))
+  L[, `:=`(wf = fifelse(is.na(b_f), 0, 1 / s_f^2), wm = fifelse(is.na(b_m), 0, 1 / s_m^2))]
+  L[, z := (fifelse(is.na(b_f), 0, b_f * wf) + fifelse(is.na(b_m), 0, b_m * wm)) / sqrt(wf + wm)]
+  m <- merge(look[, .(var = variant_id, key, ref37, alt37)], L[, .(key, REF, ALT, z)], by = "key", allow.cartesian = TRUE)
+  m <- m[(REF == ref37 & ALT == alt37) | (REF == alt37 & ALT == ref37)]
+  m[, z_alt := fifelse(REF == ref37, z, -z)]
+  m <- m[!(var %chin% var[duplicated(var)])]       # drop variants matched twice
+  fwrite(m[, .(var, z_alt)], f_gw, sep = "\t")
+  say("model variants with an LDL statistic: %d", nrow(m))
+}
+gw <- fread(f_gw)
+
+# ---- 3. S-PrediXcan z of every liver model gene -------------------------------------------
+f_tw <- file.path(odir, "ldl_twas_liver.tsv.gz")
+if (!file.exists(f_tw)) {
+  cv <- fread(cmd = zcat(f_cov)); setnames(cv, toupper(names(cv)))
+  if (!all(c("GENE", "RSID1", "RSID2", "VALUE") %in% names(cv))) stop("unexpected covariance columns: ", paste(names(cv), collapse = ","))
+  cv <- split(cv[, .(GENE, RSID1, RSID2, VALUE)], by = "GENE", keep.by = FALSE)
+  M <- merge(W, gw, by = "var")
+  M[, z := fifelse(eff == alt38, z_alt, fifelse(eff == ref38, -z_alt, NA_real_))]
+  M <- M[is.finite(z)]
+  nmod <- W[, .N, by = gene]
+  res <- rbindlist(lapply(split(M, by = "gene"), function(x) {
+    g <- x$gene[1]; C <- cv[[g]]; if (is.null(C)) return(NULL)
+    v <- x$var; S <- matrix(0, length(v), length(v), dimnames = list(v, v))
+    C <- C[RSID1 %chin% v & RSID2 %chin% v]
+    S[cbind(C$RSID1, C$RSID2)] <- C$VALUE; S[cbind(C$RSID2, C$RSID1)] <- C$VALUE
+    sl <- sqrt(pmax(diag(S), 0)); sg2 <- drop(crossprod(x$w, S %*% x$w))
+    if (!(sg2 > 0)) return(NULL)
+    data.table(gene = g, n_used = length(v), z_twas = sum(x$w * sl * x$z) / sqrt(sg2))
+  }))
+  if (nrow(res) < 0.5 * uniqueN(M$gene)) { print(head(rbindlist(cv[1:3], idcol = "GENE"))); print(head(M)); stop("S-PrediXcan failed for most genes: check the variant IDs of the covariance file") }
+  res <- merge(res, nmod[, .(gene, n_model = N)], by = "gene")
+  res <- merge(res, E, by = "gene", all.x = TRUE)
+  res[, gene_id := strip(gene)]
+  res <- res[!(gene_id %chin% gene_id[duplicated(gene_id)])]
+  fwrite(res[, .(gene_id, gene_name, n_model, n_used, z_twas)], f_tw, sep = "\t")
+  say("S-PrediXcan: %d genes; IQR-based SD %.2f; |z| > 5: %d", nrow(res),
+      diff(quantile(res$z_twas, c(.25, .75))) / 1.349, sum(abs(res$z_twas) > 5))
+  print(head(res[order(-abs(z_twas)), .(gene_name, n_model, n_used, z_twas = round(z_twas, 1))], 25))
+}
+tw <- fread(f_tw)
+modset <- split(W[, .(g = strip(gene), var)], by = "g", keep.by = FALSE)
+modset <- lapply(modset, `[[`, "var")
+
+# ---- 4. liver eQTL statistics: one pass over the eQTL Catalogue file, split by chromosome ---
+# TSS of each gene from the GENCODE v26 annotation of GTEx (start for + strand, end for - strand).
+sdir <- file.path(tmp, "liver_pairs")
+if (!file.exists(file.path(sdir, "DONE"))) {
+  dir.create(sdir, showWarnings = FALSE)
+  gtf <- fread(cmd = paste(if (grepl("\\.gz$", f_gtf)) zcat(f_gtf) else paste("cat", shQuote(f_gtf)), "| grep -v '^#'"),
+               sep = "\t", header = FALSE, select = c(1, 3, 4, 5, 7, 9), col.names = c("chr", "feature", "start", "end", "strand", "attr"))
+  gtf <- gtf[feature == "gene"]
+  gtf[, gene_id := strip(sub('^.*gene_id "([^"]+)".*$', "\\1", attr))]
+  gtf[, tss := fifelse(strand == "-", end, start)]
+  gtf <- gtf[gene_id %chin% tw$gene_id & !(gene_id %chin% gene_id[duplicated(gene_id)])]
+  say("model genes with a TSS: %d of %d", nrow(gtf), nrow(tw))
+  gfile <- file.path(tmp, "model_genes_tss.txt"); fwrite(gtf[, .(gene_id, tss)], gfile, sep = "\t", col.names = FALSE)
+  hdr <- names(fread(cmd = paste(zcat(f_pairs), "| head -2")))
+  need <- c("gene_id", "chromosome", "position", "ref", "alt", "variant", "maf", "beta", "se", "type")
+  if (!all(need %in% hdr)) stop("unexpected eQTL columns: ", paste(hdr, collapse = ","))
+  ix <- as.list(match(need, hdr)); names(ix) <- need
+  awk <- sprintf(paste0("awk -F'\\t' -v OFS='\\t' -v G=%s -v D=%s -v cg=%d -v cc=%d -v cp=%d -v cr=%d -v ca=%d -v cv=%d -v cm=%d -v cb=%d -v cs=%d -v ct=%d '",
+    "BEGIN{while((getline l < G)>0){split(l,x,\"\\t\"); T[x[1]]=x[2]}} NR==1{next} $ct!=\"SNP\"{next} ($cm+0)<0.05{next} ($cs+0)<=0{next} ",
+    "length($cr)!=1||length($ca)!=1{next} {g=$cg; sub(/\\..*$/,\"\",g); if(!(g in T)) next; c=$cc; sub(/^chr/,\"\",c); if(c !~ /^[0-9]+$/) next; ",
+    "f=D \"/chr\" c \".tsv.gz\"; p=\"gzip > \" f; P[p]=1; print g,$cv,$cp,$cp-T[g],$cb/$cs | p} END{for(p in P) close(p)}'"),
+    shQuote(gfile), shQuote(sdir), ix$gene_id, ix$chromosome, ix$position, ix$ref, ix$alt, ix$variant, ix$maf, ix$beta, ix$se, ix$type)
+  say("splitting the eQTL file (one pass)")
+  st <- system(paste(zcat(f_pairs), "|", awk))
+  if (st != 0) stop("awk failed")
+  writeLines("DONE", file.path(sdir, "DONE"))
 }
 
-weights <- read_model_table("weights")
-extra <- read_model_table("extra")
-setnames(weights, tolower(names(weights)))
-setnames(extra, tolower(names(extra)))
-first_name <- function(candidates, available, label) {
-  hit <- intersect(candidates, available)
-  if (!length(hit)) stop("Cannot identify ", label, " column in MASHR model")
-  hit[1L]
-}
-variant_col <- first_name(c("varid", "rsid", "variant", "id"), names(weights), "variant")
-gene_col <- first_name(c("gene", "gene_id", "genename"), names(weights), "gene")
-effect_col <- first_name(c("eff_allele", "effect_allele", "alt", "a1"), names(weights), "effect allele")
-weight_col <- first_name(c("weight", "wgt", "value"), names(weights), "weight")
-weights <- weights[, .(
-  variant = as.character(get(variant_col)),
-  gene = sub("[.][0-9]+$", "", as.character(get(gene_col))),
-  effect = toupper(as.character(get(effect_col))),
-  weight = as.numeric(get(weight_col))
-)]
-parts <- tstrsplit(weights$variant, "_", fixed = TRUE)
-if (length(parts) < 4L) stop("MASHR variant identifiers must contain chromosome, position, REF and ALT")
-weights[, `:=`(chr38 = sub("^chr", "", parts[[1L]], ignore.case = TRUE),
-               pos38 = as.integer(parts[[2L]]), ref38 = toupper(parts[[3L]]),
-               alt38 = toupper(parts[[4L]]))]
-say("MASHR weights: %d rows across %d genes", nrow(weights), uniqueN(weights$gene))
-
-lookup <- fread(cmd = paste("gzip -cd", shQuote(lookup_file)),
-                select = c("variant_id", "variant_id_b37"))
-lookup <- lookup[variant_id %chin% weights$variant & !is.na(variant_id_b37) & nzchar(variant_id_b37)]
-lookup[, c("chr37", "pos37", "ref37", "alt37") :=
-         tstrsplit(variant_id_b37, "_", fixed = TRUE, keep = 1:4)]
-lookup[, key := paste(sub("^chr", "", chr37, ignore.case = TRUE),
-                      as.integer(pos37), sep = ":")]
-
-read_ldl <- function(path) {
-  x <- fread(cmd = paste("gzip -cd", shQuote(path)),
-             select = c("CHROM", "POS_b37", "REF", "ALT", "EFFECT_SIZE", "SE"),
-             colClasses = list(character = c("CHROM", "REF", "ALT")))
-  x[, key := paste(sub("^chr", "", CHROM, ignore.case = TRUE),
-                   as.integer(POS_b37), sep = ":")]
-  x[is.finite(EFFECT_SIZE) & is.finite(SE) & SE > 0,
-    .(key, REF = toupper(REF), ALT = toupper(ALT), beta = EFFECT_SIZE, se = SE)]
-}
-female <- read_ldl(ldl_files[["female"]])
-male <- read_ldl(ldl_files[["male"]])
-ldl <- merge(female, male, by = c("key", "REF", "ALT"), all = TRUE,
-             suffixes = c("_female", "_male"))
-ldl[, `:=`(
-  wf = fifelse(is.na(beta_female), 0, 1 / se_female^2),
-  wm = fifelse(is.na(beta_male), 0, 1 / se_male^2)
-)]
-ldl[, z := (fifelse(is.na(beta_female), 0, beta_female * wf) +
-              fifelse(is.na(beta_male), 0, beta_male * wm)) / sqrt(wf + wm)]
-model_z <- merge(lookup[, .(variant = variant_id, key, ref37, alt37)],
-                 ldl[, .(key, REF, ALT, z)], by = "key", allow.cartesian = TRUE)
-model_z <- model_z[(REF == ref37 & ALT == alt37) | (REF == alt37 & ALT == ref37)]
-model_z[, z_alt := fifelse(REF == ref37, z, -z)]
-model_z <- model_z[!variant %chin% variant[duplicated(variant)]]
-fwrite(model_z[, .(variant, z_alt)],
-       file.path(work_dir, "ldl_model_variants.tsv.gz"), sep = "\t")
-say("LDL statistics matched to %d model variants", nrow(model_z))
-
-read_covariance <- function(path) {
-  x <- fread(cmd = paste("gzip -cd", shQuote(path)))
-  setnames(x, toupper(names(x)))
-  needed <- c("GENE", "RSID1", "RSID2", "VALUE")
-  if (length(setdiff(needed, names(x)))) stop("Unexpected MASHR covariance columns")
-  x[, GENE := sub("[.][0-9]+$", "", GENE)]
-  x
-}
-
-twas_path <- file.path(output_dir, "ldl_twas_liver.tsv.gz")
-if (!file.exists(twas_path)) {
-  covariance <- read_covariance(covariance_file)
-  joined <- merge(weights, model_z[, .(variant, z = z_alt)], by = "variant")
-  result <- rbindlist(lapply(split(joined, joined$gene), function(model) {
-    gene <- model$gene[1L]
-    variants <- model$variant
-    cov <- covariance[GENE == gene & RSID1 %chin% variants & RSID2 %chin% variants]
-    S <- matrix(0, length(variants), length(variants), dimnames = list(variants, variants))
-    if (nrow(cov)) {
-      S[cbind(match(cov$RSID1, variants), match(cov$RSID2, variants))] <- cov$VALUE
-      S[cbind(match(cov$RSID2, variants), match(cov$RSID1, variants))] <- cov$VALUE
-    }
-    scale <- sqrt(pmax(diag(S), 0))
-    variance <- drop(crossprod(model$weight, S %*% model$weight))
-    if (!is.finite(variance) || variance <= 0) return(NULL)
-    data.table(gene = gene, n_model = nrow(model), n_used = sum(is.finite(model$z)),
-               z_twas = sum(model$weight * scale * model$z) / sqrt(variance))
-  }), fill = TRUE)
-  if (!nrow(result)) stop("No S-PrediXcan statistics could be computed")
-  gene_name_col <- intersect(c("gene_name", "genename", "name"), names(extra))[1L]
-  extra_gene_col <- intersect(c("gene", "gene_id"), names(extra))[1L]
-  if (!is.na(gene_name_col) && !is.na(extra_gene_col)) {
-    annotation <- extra[, .(gene = sub("[.][0-9]+$", "", as.character(get(extra_gene_col))),
-                            gene_name = as.character(get(gene_name_col)))]
-    result <- merge(result, unique(annotation), by = "gene", all.x = TRUE)
-  } else result[, gene_name := gene]
-  fwrite(result, twas_path, sep = "\t")
-}
-twas <- fread(twas_path)
-
-gtf <- fread(cmd = paste(if (grepl("[.]gz$", gtf_file)) "gzip -cd" else "cat",
-                         shQuote(gtf_file), "| grep -v '^#'"),
-             sep = "\t", header = FALSE, select = c(1, 3, 4, 5, 7, 9),
-             col.names = c("chr", "feature", "start", "end", "strand", "attributes"))
-gtf <- gtf[feature == "gene"]
-gtf[, gene := sub('.*gene_id "([^"]+)".*', "\\1", attributes)]
-gtf[, gene := sub("[.][0-9]+$", "", gene)]
-gtf[, tss := fifelse(strand == "-", end, start)]
-gtf <- unique(gtf[gene %chin% twas$gene, .(gene, tss)])
-say("Liver prediction genes with annotated TSS: %d", nrow(gtf))
-
-split_dir <- file.path(work_dir, "liver_pairs")
-done_marker <- file.path(split_dir, "DONE")
-if (!file.exists(done_marker)) {
-  dir.create(split_dir, recursive = TRUE, showWarnings = FALSE)
-  wanted <- file.path(work_dir, "model_genes.tsv")
-  fwrite(gtf[, .(gene)], wanted, sep = "\t", col.names = FALSE)
-  header <- names(fread(cmd = paste("gzip -cd", shQuote(pair_file), "| head -1"), nrows = 0L))
-  aliases <- list(
-    gene = c("gene_id", "molecular_trait_id"), chromosome = c("chromosome", "chr"),
-    position = c("position", "pos"), ref = c("ref", "reference_allele"),
-    alt = c("alt", "alternate_allele"), variant = c("variant", "variant_id"),
-    maf = c("maf", "minor_allele_frequency"), beta = c("beta", "slope"),
-    se = c("se", "slope_se"), type = c("type", "variant_type")
-  )
-  column <- vapply(aliases, function(x) {
-    i <- match(tolower(x), tolower(header), nomatch = 0L)
-    i <- i[i > 0L]
-    if (!length(i)) stop("Missing eQTL Catalogue column: ", paste(x, collapse = "/"))
-    i[1L]
-  }, integer(1L))
-  awk <- file.path(work_dir, "split_eqtl.awk")
-  writeLines(c(
-    "BEGIN { FS=OFS=\"\\t\"; while ((getline g < genes) > 0) keep[g]=1 }",
-    sprintf("NR>1 { gene=$%d; sub(/\\.[0-9]+$/,\"\",gene); if (!(gene in keep)) next", column[["gene"]]),
-    sprintf("chr=$%d; sub(/^chr/,\"\",chr); if (chr !~ /^[0-9]+$/) next", column[["chromosome"]]),
-    sprintf("if ($%d+0 < 0.05 || $%d != \"SNP\") next", column[["maf"]], column[["type"]]),
-    sprintf("print gene,$%d,$%d,$%d,$%d,$%d,$%d,$%d,$%d > (out \"/chr\" chr \".tsv\") }",
-            column[["variant"]], column[["position"]], column[["ref"]], column[["alt"]],
-            column[["maf"]], column[["beta"]], column[["se"]], column[["type"]])
-  ), awk)
-  status <- system2("bash", c("-c", shQuote(sprintf("gzip -cd %s | awk -v genes=%s -v out=%s -f %s",
-                                                      shQuote(pair_file), shQuote(wanted),
-                                                      shQuote(split_dir), shQuote(awk)))))
-  if (status != 0L) stop("Failed to split the eQTL Catalogue file")
-  writeLines("DONE", done_marker)
-}
-
-twas_z <- setNames(twas$z_twas, twas$gene)
-twas_name <- setNames(twas$gene_name, twas$gene)
-model_sets <- split(weights[, .(variant)], weights$gene)
-shares_variant <- function(a, b) length(intersect(model_sets[[a]]$variant, model_sets[[b]]$variant))
-choose_genes <- function(genes, rule, number = 3L) {
-  if (length(genes) < number) return(NULL)
-  if (rule == "nearest") return(genes[seq_len(number)])
-  selected <- genes[1L]
-  for (gene in genes[-1L]) {
-    if (all(vapply(selected, function(old) shares_variant(old, gene) == 0L, logical(1L)))) {
-      selected <- c(selected, gene)
-    }
-    if (length(selected) == number) return(selected)
+# ---- 5. features: one variant per 10-kb window, G = 3 genes per variant -------------------
+G <- 3L
+zt <- setNames(tw$z_twas, tw$gene_id); gn <- setNames(tw$gene_name, tw$gene_id)
+nshared <- function(a, b) length(intersect(modset[[a]], modset[[b]]))
+pick <- function(genes, rule) {               # genes ordered by distance of the TSS to the variant
+  if (rule == "nearest") return(genes[seq_len(G)])
+  sel <- genes[1L]
+  for (g in genes[-1L]) {
+    if (all(vapply(sel, function(s) nshared(s, g) == 0L, TRUE))) sel <- c(sel, g)
+    if (length(sel) == G) return(sel)
   }
   NULL
 }
-
-outputs <- list(noshare = list(), nearest = list())
-for (chromosome in 1:22) {
-  path <- file.path(split_dir, sprintf("chr%d.tsv", chromosome))
-  if (!file.exists(path)) next
-  eqtl <- fread(path, header = FALSE,
-                col.names = c("gene", "variant", "pos", "ref", "alt", "maf", "beta", "se", "type"))
-  eqtl <- eqtl[is.finite(beta) & is.finite(se) & se > 0]
-  eqtl[, z := beta / se]
-  eqtl <- merge(eqtl, gtf, by = "gene")
-  variants <- unique(eqtl[, .(variant, pos)])
-  variants[, window := pos %/% 10000L]
-  variants[, midpoint_distance := abs(pos - (window * 10000L + 5000L))]
-  setorder(variants, window, midpoint_distance, variant)
-  variants <- variants[, .SD[1L], by = window]
-  candidate <- eqtl[variant %chin% variants$variant]
-  candidate[, tss_distance := abs(tss - pos)]
-  setorder(candidate, variant, tss_distance, gene)
-  by_variant <- split(candidate, candidate$variant)
-  for (rule in names(outputs)) {
-    rows <- lapply(by_variant, function(x) {
-      genes <- unique(x$gene)
-      selected <- choose_genes(genes, rule)
-      if (is.null(selected)) return(NULL)
-      row <- list(variant = x$variant[1L], chr = chromosome, pos_b38 = x$pos[1L],
-                  shared = sum(combn(selected, 2L, function(g) shares_variant(g[1L], g[2L]))))
-      for (g in seq_along(selected)) {
-        hit <- x[gene == selected[g]][1L]
-        row[[paste0("gene", g)]] <- selected[g]
-        row[[paste0("gene", g, "_name")]] <- twas_name[[selected[g]]]
-        row[[paste0("tss", g)]] <- hit$tss
-        row[[paste0("alpha", g)]] <- hit$z
-        row[[paste0("beta", g)]] <- twas_z[[selected[g]]]
+out <- list(noshare = list(), nearest = list())
+for (k in 1:22) {
+  f <- file.path(sdir, sprintf("chr%d.tsv.gz", k)); if (!file.exists(f)) next
+  d <- fread(cmd = zcat(f), header = FALSE, col.names = c("gene", "variant", "pos", "tss", "z"))
+  d <- d[is.finite(z)]
+  d[, ng := .N, by = variant]
+  v <- unique(d[ng >= G, .(variant, pos)])
+  v[, win := pos %/% 10000L][, dm := abs(pos - (win * 10000L + 5000L))]
+  setorder(v, win, dm, pos, variant); v <- v[!duplicated(win)]
+  e <- d[variant %chin% v$variant][, ad := abs(tss)]
+  setorder(e, variant, ad, gene)
+  e <- split(e, by = "variant")
+  for (r in names(out)) {
+    out[[r]][[k]] <- rbindlist(lapply(e, function(x) {
+      g <- pick(x$gene, r); if (is.null(g)) return(NULL)
+      m <- match(g, x$gene)
+      sh <- sum(combn(g, 2L, function(p) nshared(p[1L], p[2L])))
+      row <- list(variant = x$variant[1L], chr = k, pos_b38 = x$pos[1L], shared = sh)
+      for (j in seq_len(G)) {
+        row[[paste0("gene", j)]] <- g[j]; row[[paste0("gene", j, "_name")]] <- gn[[g[j]]]; row[[paste0("tss", j)]] <- x$tss[m[j]]
+        row[[paste0("alpha", j)]] <- x$z[m[j]]; row[[paste0("beta", j)]] <- zt[[g[j]]]
       }
-      as.data.table(row)
-    })
-    outputs[[rule]][[length(outputs[[rule]]) + 1L]] <- rbindlist(rows, fill = TRUE)
+      row
+    }))
   }
-  say("chromosome %d: %d candidate variants", chromosome, nrow(candidate))
+  say("chr%d: %d variant-gene pairs, %d windows", k, nrow(d), nrow(v))
 }
-
-stat_columns <- as.vector(rbind(paste0("alpha", 1:3), paste0("beta", 1:3)))
-for (rule in names(outputs)) {
-  result <- rbindlist(outputs[[rule]], fill = TRUE)
-  setorder(result, chr, pos_b38, variant)
-  result <- result[complete.cases(result[, ..stat_columns])]
-  fwrite(result, file.path(output_dir, sprintf("mediation_ldl_liver_%s.tsv.gz", rule)), sep = "\t")
-  say("%s: %d features and %d gene triples", rule, nrow(result),
-      uniqueN(result[, paste(gene1, gene2, gene3, sep = ":")]))
+zc <- as.vector(rbind(paste0("alpha", seq_len(G)), paste0("beta", seq_len(G))))
+for (r in names(out)) {
+  D <- rbindlist(out[[r]]); setorder(D, chr, pos_b38)
+  setcolorder(D, c("variant", "chr", "pos_b38", as.vector(rbind(paste0("gene", 1:G), paste0("gene", 1:G, "_name"), paste0("tss", 1:G))), zc, "shared"))
+  fwrite(D, file.path(odir, sprintf("mediation_ldl_liver_%s.tsv.gz", r)), sep = "\t")
+  Z <- as.matrix(D[, zc, with = FALSE])
+  say("rule %s: %d features, %d distinct gene triples, %d with shared model variants", r, nrow(D),
+      uniqueN(D[, paste0("gene", 1:G), with = FALSE]), sum(D$shared > 0))
+  print(round(cor(Z), 3))
+  print(round(apply(Z, 2, function(v) diff(quantile(v, c(.25, .75))) / 1.349), 2))
+  print(round(colMeans(abs(Z) > 4), 4))
 }
 say("DONE")

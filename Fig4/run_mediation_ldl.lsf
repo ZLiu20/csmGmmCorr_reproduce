@@ -1,12 +1,13 @@
-#!/usr/bin/env bash
-#BSUB -J mediation_ldl[1-20]%3
-#BSUB -q long
-#BSUB -W 72:00
+#BSUB -J medldl[1-23]
+#BSUB -W 8:00
+#BSUB -o Fig4/errDir/medldl_%I.out
+#BSUB -e Fig4/errDir/medldl_%I.err
+#BSUB -q medium
 #BSUB -n 4
-#BSUB -M 64
-#BSUB -R "rusage[mem=64]"
-#BSUB -o Fig4/errDir/mediation_%J_%I.out
-#BSUB -e Fig4/errDir/mediation_%J_%I.err
-set -euo pipefail
+#BSUB -R "span[hosts=1] rusage[mem=32]"
+#BSUB -M 32
+
+# run 1-23   (9-14: one variant per gene triple; 15-20: conditional alpha; 21-23: a_mu = 3)
 module load R/4.5.1
-Rscript -e 'source("SupportingCode/load_all.R"); j<-MEDLDL_JOBS[as.integer(Sys.getenv("LSB_JOBINDEX")),]; run_mediation_ldl(j$set,j$variant,j$a_mu)'
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript Fig4/mediation_ldl_fit.R $LSB_JOBINDEX

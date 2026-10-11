@@ -1,18 +1,16 @@
-.supporting_files <- c(
-  "sim_data.R", "incongruity.R", "sim_tasks.R", "run_sim_task.R",
-  "summarize.R", "realdata.R", "glgc_prepare.R", "plot_style.R", "floor_study.R"
-)
-for (.file in .supporting_files) source(here::here("SupportingCode", .file))
-
-.comparator_files <- list.files(here::here("SupportingCode", "comparators"),
-                                pattern = "[.]R$", full.names = TRUE)
-for (.file in .comparator_files) source(.file)
-rm(.file, .supporting_files, .comparator_files)
-
-load_kernels <- function(root = here::here()) {
-  extension <- .Platform$dynlib.ext
-  library_path <- file.path(root, "SupportingCode", "src", paste0("reprokernels", extension))
-  if (!file.exists(library_path)) stop("Compiled reproduction kernels are missing: ", library_path)
-  if (!is.loaded("rd_majorant")) dyn.load(library_path)
-  invisible(library_path)
+# Sources all supporting code (base R only; packages are loaded by the scripts that need them).
+local({
+  code <- here::here("SupportingCode")
+  for (f in c("sim_data.R", "incongruity.R", "sim_tasks.R", "run_sim_task.R", "summarize.R",
+              "realdata.R", "glgc_prepare.R", "plot_style.R", "floor_study.R"))
+    source(file.path(code, f))
+  for (f in list.files(file.path(code, "comparators"), pattern = "\\.R$", full.names = TRUE)) source(f)
+})
+# Compiled kernels (monotone adjustment and incongruity for millions of variants; BLAKE2b
+# hash for the GLGC fitting sample). Built once by setup.R.
+load_kernels <- function() {
+  lib <- here::here("SupportingCode", "src", paste0("reprokernels", .Platform$dynlib.ext))
+  if (!file.exists(lib)) stop("compiled kernels not found; run  Rscript setup.R  in the repository root")
+  if (!is.loaded("rd_majorant")) dyn.load(lib)
+  invisible(lib)
 }

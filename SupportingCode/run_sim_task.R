@@ -1,252 +1,148 @@
+# One task of a simulation array: replicates rep_from..rep_to of one (design, K, t) cell.
+#   run_sim_task("main_ours_pl_pen", aID)   (array names: SupportingCode/sim_tasks.R)
+# Every replicate regenerates its data from fixed seeds (sim_data.R, sim_seed), fits the
+# methods of the array and writes one CSV with one row per (target, t, method):
+#   <folder>/output/<study>/<type>/<design>_K<K>_t<t>_rep<rep>.csv
+# Replicates whose file exists are skipped, so a task can be resubmitted.
+# Environment variables: SIM_N (features per data set, default 100000; other values write
+# to output_smoke/ and are for testing only), MAX_ITER (ECM iterations, default 1500),
+# LSB_DJOB_NUMPROC (threads; set by LSF from -n), SIM_MAX_REPS (testing: replicates per task).
 run_sim_task <- function(array, aID, root = here::here()) {
-  spec <- sim_array(array)
-  aID <- as.integer(aID)
-  if (aID < 1L || aID > nrow(spec$tasks)) {
-    stop(sprintf("Task index %d is outside 1--%d", aID, nrow(spec$tasks)))
-  }
-
-  task <- spec$tasks[aID, , drop = FALSE]
-  study <- spec$study
-  method_type <- spec$type
-  scenario <- spec$scen
-  design_id <- task$design
-  K <- task$K
-  data_t <- task$t
+  A <- sim_array(array)
+  if (aID < 1L || aID > nrow(A$tasks)) stop(sprintf("task %d outside 1-%d", aID, nrow(A$tasks)))
+  tk <- A$tasks[aID, ]
+  study <- A$study; type0 <- A$type; scen <- A$scen
+  d <- tk$design; K <- tk$K; t_data <- tk$t
   cores <- as.integer(Sys.getenv("LSB_DJOB_NUMPROC", "1"))
-  q <- 0.1
+  Q <- 0.1
   N <- as.integer(Sys.getenv("SIM_N", "100000"))
-  max_iter <- as.integer(Sys.getenv("MAX_ITER", "1500"))
-  design <- design_table(study, scenario)[design_id, , drop = FALSE]
+  MAXIT <- as.integer(Sys.getenv("MAX_ITER", "1500"))
+  dt <- design_table(study, scen)[d, ]
+  out_dir <- file.path(root, A$folder, if (N != 100000L) "output_smoke" else "output", study, type0)
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  if (grepl("^ours|_csm$", type0)) suppressMessages(library(csmGmmCorr))
+  message(sprintf("array %s, task %d: design %d (%s), K = %d, t = %d, replicates %d-%d, N = %d, cores = %d",
+                  array, aID, d, dt$design, K, t_data, tk$rep_from, tk$rep_to, N, cores))
 
-  result_dir <- file.path(root, if (N == 100000L) "output" else "output_smoke",
-                          study, method_type)
-  dir.create(result_dir, recursive = TRUE, showWarnings = FALSE)
-  if (identical(method_type, "ours_rp_csm")) suppressMessages(library(csmGmmCorr))
-
-  message(sprintf(
-    "array=%s task=%d design=%d (%s) K=%d t=%d reps=%d-%d N=%d cores=%d",
-    array, aID, design_id, design$design, K, data_t, task$rep_from, task$rep_to, N, cores
-  ))
-
-  evaluate_one <- function(replicate) {
-    destination <- file.path(
-      result_dir,
-      sprintf("%s_K%02d_t%d_rep%03d.csv", design$design, K, data_t, replicate)
-    )
-    if (file.exists(destination)) {
-      message("exists: ", destination)
-      return(invisible(NULL))
-    }
-
-    started <- proc.time()[["elapsed"]]
-    generated <- system.time(
-      dataset <- make_dataset(scenario, design_id, K, data_t, replicate, N, study)
-    )[["elapsed"]]
-    train <- dataset$train
-    test <- dataset$test
-    targets <- c(pl = "pleiotropy", rp = "replication", med = "mediation")
-    target <- targets[[scenario]]
-    thresholds <- if (scenario == "med") data_t else 1:2
-
-    common <- data.frame(
-      study = study,
-      scen = scenario,
-      design = design$design,
-      axis = design$axis,
-      x = design$x,
-      effect = design$effect,
-      tau1 = design$tau1,
-      a_min = design$a_min,
-      rho = design$rho,
-      K = K,
-      rep = replicate,
-      stringsAsFactors = FALSE
-    )
-
-    make_row <- function(target, t, method, rejected, extra = list(), score = NULL) {
-      alt <- truth_alt(test$H, target, t)
-      rejected <- as.logical(rejected)
-      row <- cbind(
-        common,
-        data.frame(
-          target = target,
-          t = t,
-          method = method,
-          nAlt = sum(alt),
-          R = sum(rejected),
-          FP = sum(rejected & !alt),
-          FDP = if (sum(rejected)) mean(!alt[rejected]) else 0,
-          power = if (sum(alt)) sum(rejected & alt) / sum(alt) else NA_real_,
-          incon_dec = incon_decision(test$Z, rejected, target, t),
-          incon_score = incon_score(test$Z, score, target, t),
-          stringsAsFactors = FALSE
-        )
-      )
-
-      if (isTRUE(design$ld > 0)) {
-        local_alt <- truth_alt_locus(alt, 5L)
-        row$FP_loc <- sum(rejected & !local_alt)
-        row$FDP_loc <- if (sum(rejected)) mean(!local_alt[rejected]) else 0
-        for (window in c(1L, 2L, 5L)) {
-          union_alt <- truth_alt(union_config(test$H, window), target, t)
-          row[[paste0("FDP_union_", window)]] <- if (sum(rejected)) mean(!union_alt[rejected]) else 0
-          row[[paste0("power_union_", window)]] <- if (sum(union_alt)) {
-            sum(rejected & union_alt) / sum(union_alt)
-          } else NA_real_
+  run_rep <- function(r) {
+    out <- file.path(out_dir, sprintf("%s_K%02d_t%d_rep%03d.csv", dt$design, K, t_data, r))
+    if (file.exists(out)) { message("exists: ", out); return(invisible()) }
+    t0 <- proc.time()[["elapsed"]]
+    dat <- make_dataset(scen, d, K, t_data, r, N, study = study)
+    gen_min <- (proc.time()[["elapsed"]] - t0) / 60
+    te <- dat$test; tr <- dat$train
+    targets <- switch(scen, pl = "pleiotropy", rp = "replication", med = "mediation")
+    ts <- if (scen == "med") t_data else 1:2
+    base <- data.frame(study = study, scen = scen, design = dt$design, axis = dt$axis, x = dt$x,
+                       effect = dt$effect, tau1 = dt$tau1, a_min = dt$a_min, rho = dt$rho, K = K, rep = r,
+                       stringsAsFactors = FALSE)
+    row <- function(target, t, method, rej, extra = list(), score = NULL) {
+      alt <- truth_alt(te$H, target, t)
+      o <- cbind(base, data.frame(target = target, t = t, method = method, nAlt = sum(alt), R = sum(rej),
+                 FP = sum(rej & !alt), FDP = if (sum(rej)) mean(!alt[rej]) else 0,
+                 power = if (sum(alt)) sum(rej & alt) / sum(alt) else NA,
+                 incon_dec = incon_decision(te$Z, rej, target, t),
+                 incon_score = incon_score(te$Z, score, target, t), stringsAsFactors = FALSE))
+      if (isTRUE(dt$ld > 0)) {   # LD study: locus-level FDP and union-of-effects truth
+        al <- truth_alt_locus(alt, 5L)
+        o$FP_loc <- sum(rej & !al); o$FDP_loc <- if (sum(rej)) mean(!al[rej]) else 0
+        for (w in c(1L, 2L, 5L)) {
+          au <- truth_alt(union_config(te$H, w), target, t)
+          o[[paste0("FDP_union", w)]] <- if (sum(rej)) mean(!au[rej]) else 0
+          o[[paste0("power_union", w)]] <- if (sum(au)) sum(rej & au) / sum(au) else NA
         }
       }
-      if (length(extra)) row <- cbind(row, as.data.frame(extra, stringsAsFactors = FALSE))
-      row
+      if (length(extra)) o <- cbind(o, as.data.frame(extra, stringsAsFactors = FALSE))
+      o
     }
-
-    rows <- NULL
-    safe_fit <- function(z, model, control) {
-      tryCatch(csm_fit(z, model, starts = c("null", "shared"), control = control),
+    res <- NULL
+    fit_or_fail <- function(Z, sp, ctl)
+      tryCatch(csm_fit(Z, sp, starts = c("null", "shared"), control = ctl),
                error = function(e) list(converged = FALSE, message = conditionMessage(e)))
-    }
 
-    if (grepl("^ours", method_type)) {
-      component_pattern <- if (grepl("_[AC]$", method_type)) {
-        sub(".*_([AC])$", "\\1", method_type)
-      } else "B"
-      components <- switch(component_pattern,
-                           A = c(1L, 1L),
-                           B = c(2L, 1L),
-                           C = c(2L, 2L))
-      penalized <- grepl("_pen", method_type)
-      lambda_mu <- 30
-      lambda_weight <- 10
-      label_suffix <- ""
-      match <- regexec("_L([0-9]+)A([0-9]+)$", method_type)
-      parsed <- regmatches(method_type, match)[[1L]]
-      if (length(parsed)) {
-        lambda_mu <- as.numeric(parsed[2L])
-        lambda_weight <- as.numeric(parsed[3L])
-        label_suffix <- sprintf("_L%gA%g", lambda_mu, lambda_weight)
+    if (grepl("^ours", type0)) {
+      # Region: magnitudes in [0.5, 15], kappa = 0.05. Magnitude components: structure B (2 for
+      # supports of size one, 1 otherwise); A = 1/1 and C = 2/2 for the sensitivity arrays.
+      struct <- if (grepl("_[ABC]$", type0)) sub("^.*_", "", type0) else "B"
+      nc <- switch(struct, A = c(1L, 1L), B = c(2L, 1L), C = c(2L, 2L))
+      pen <- grepl("_pen", type0)
+      lam <- 30; alp <- 10; pl_tag <- ""
+      if (grepl("_L[0-9]+A[0-9]+$", type0)) {
+        lam <- as.numeric(sub("^.*_L([0-9]+)A([0-9]+)$", "\\1", type0))
+        alp <- as.numeric(sub("^.*_L([0-9]+)A([0-9]+)$", "\\2", type0))
+        pl_tag <- sprintf("_L%gA%g", lam, alp)
       }
-      control <- if (penalized) {
-        csm_control(cores = cores, max_iter = max_iter,
-                    penalty = lambda_mu, weight_penalty = lambda_weight)
-      } else {
-        csm_control(cores = cores, max_iter = max_iter, penalty = 0, weight_penalty = 0)
+      ctl <- if (pen) csm_control(cores = cores, max_iter = MAXIT, penalty = lam, weight_penalty = alp)
+             else csm_control(cores = cores, max_iter = MAXIT, penalty = 0, weight_penalty = 0)
+      v <- paste0(if (pen) "penalized" else "ML", if (struct != "B") paste0("_", struct) else "", pl_tag)
+      if (grepl("_oracle$", type0)) {
+        # Sigma fixed at the projected correlation of the statistics of the null features.
+        R0 <- csmGmmCorr:::.project_cor(stats::cor(tr$Z[rowSums(tr$H != 0) == 0, , drop = FALSE]), 0.05)
+        ctl <- csm_control(cores = cores, max_iter = MAXIT, penalty = lam, weight_penalty = alp, fix_sigma = R0)
+        v <- "penalized_nullSigma"
       }
-      method_label <- paste0(if (penalized) "penalized" else "ML",
-                             if (component_pattern == "B") "" else paste0("_", component_pattern),
-                             label_suffix)
-
-      if (grepl("_oracle$", method_type)) {
-        null_rows <- rowSums(train$H) == 0
-        oracle_cor <- stats::cor(train$Z[null_rows, , drop = FALSE])
-        oracle_cor <- csmGmmCorr:::.project_cor(oracle_cor, 0.05)
-        control <- csm_control(cores = cores, max_iter = max_iter,
-                               penalty = lambda_mu, weight_penalty = lambda_weight,
-                               fix_sigma = oracle_cor)
-        method_label <- "penalized_nullSigma"
+      sp <- csm_spec(K, M = csm_structure(K, nc[1], nc[2]), b_mu = 15)
+      tm <- system.time(f <- fit_or_fail(tr$Z, sp, ctl))[["elapsed"]]
+      message(sprintf("replicate %d: %s fit %.1f min, converged %s", r, v, tm / 60, f$converged))
+      info <- list(converged = f$converged,
+                   iterations = if (f$converged) sum(f$runs$iterations) else NA,
+                   fit_min = tm / 60, gen_min = gen_min,
+                   Sigma_minEig = if (f$converged) min(eigen(f$params$Sigma, TRUE, TRUE)$values) else NA,
+                   structure = struct,
+                   loglik = if (f$converged) as.numeric(logLik(f)) else NA,
+                   df = if (f$converged) attr(logLik(f), "df") else NA)
+      for (tg in targets) for (t in ts) {
+        if (!f$converged) { res <- rbind(res, row(tg, t, v, rep(FALSE, N), c(info, list(flagged = NA)))); next }
+        lf <- csm_lfdr(f, te$Z, tg, t, cores = cores)
+        su <- csm_stepup(lf, Q)
+        ex <- csm_extrapolation(f, te$Z, tg, t, su$rejected, su$cutoff)
+        res <- rbind(res, row(tg, t, v, su$rejected, c(info, list(flagged = sum(ex$flag, na.rm = TRUE))), score = lf))
+        ad <- csm_adjust(te$Z, lf, tg, t, Q)
+        res <- rbind(res, row(tg, t, paste0(v, "_adjusted"), ad$rejected, c(info, list(flagged = NA))))
       }
-
-      model <- csm_spec(K, M = csm_structure(K, components[1L], components[2L]), b_mu = 15)
-      fit_time <- system.time(fit <- safe_fit(train$Z, model, control))[["elapsed"]]
-      message(sprintf("replicate %d: %s fit %.1f min, converged=%s",
-                      replicate, method_label, fit_time / 60, isTRUE(fit$converged)))
-      fit_info <- list(
-        converged = isTRUE(fit$converged),
-        iterations = if (isTRUE(fit$converged)) sum(fit$runs$iterations) else NA_integer_,
-        fit_min = fit_time / 60,
-        gen_min = generated / 60,
-        Sigma_minEig = if (isTRUE(fit$converged)) min(eigen(fit$params$Sigma, TRUE, TRUE)$values) else NA_real_,
-        structure = component_pattern,
-        loglik = if (isTRUE(fit$converged)) as.numeric(logLik(fit)) else NA_real_,
-        df = if (isTRUE(fit$converged)) attr(logLik(fit), "df") else NA_integer_
-      )
-
-      for (tg in target) for (threshold in thresholds) {
-        if (!isTRUE(fit$converged)) {
-          rows <- rbind(rows, make_row(tg, threshold, method_label, rep(FALSE, N),
-                                       c(fit_info, list(flagged = NA_integer_))))
-          next
-        }
-        lfdr <- csm_lfdr(fit, test$Z, tg, threshold, cores = cores)
-        selected <- csm_stepup(lfdr, q)
-        extrapolated <- csm_extrapolation(fit, test$Z, tg, threshold,
-                                          selected$rejected, selected$cutoff)
-        rows <- rbind(
-          rows,
-          make_row(tg, threshold, method_label, selected$rejected,
-                   c(fit_info, list(flagged = sum(extrapolated$flag, na.rm = TRUE))), lfdr),
-          make_row(tg, threshold, paste0(method_label, "_adjusted"),
-                   csm_adjust(test$Z, lfdr, tg, threshold, q)$rejected,
-                   c(fit_info, list(flagged = NA_integer_)))
-        )
-      }
-    } else if (grepl("_csm$", method_type)) {
-      model <- csm_spec(K, M = csm_structure(K, 2L, 1L), b_mu = 15)
-      plug_in <- csmGmmCorr:::.project_cor(stats::cor(train$Z), model$kappa)
-      controls <- list(
-        csmGmm = csm_control(cores = cores, max_iter = max_iter, penalty = 0,
-                             weight_penalty = 0, fix_sigma = TRUE),
-        csmGmm_cor = csm_control(cores = cores, max_iter = max_iter, penalty = 0,
-                                 weight_penalty = 0, fix_sigma = plug_in),
-        csmGmm_pen = csm_control(cores = cores, max_iter = max_iter, fix_sigma = TRUE)
-      )
-      for (method_label in names(controls)) {
-        fit_time <- system.time(fit <- safe_fit(train$Z, model, controls[[method_label]]))[["elapsed"]]
-        fit_info <- list(
-          converged = isTRUE(fit$converged),
-          fit_min = fit_time / 60,
-          gen_min = generated / 60,
-          structure = "B"
-        )
-        for (tg in target) for (threshold in thresholds) {
-          if (!isTRUE(fit$converged)) {
-            rows <- rbind(rows, make_row(tg, threshold, method_label, rep(FALSE, N), fit_info))
-          } else {
-            lfdr <- csm_lfdr(fit, test$Z, tg, threshold, cores = cores)
-            selected <- csm_stepup(lfdr, q)
-            rows <- rbind(rows, make_row(tg, threshold, method_label,
-                                         selected$rejected, fit_info, lfdr))
-          }
+    } else if (grepl("_csm$", type0)) {
+      # csmGmm (Sun et al.): the same model with Sigma fixed, structure B.
+      sp <- csm_spec(K, M = csm_structure(K, 2L, 1L), b_mu = 15)
+      R_plug <- csmGmmCorr:::.project_cor(stats::cor(tr$Z), sp$kappa)
+      for (v in c("csmGmm", "csmGmm_cor", "csmGmm_pen")) {
+        ctl <- switch(v,
+          csmGmm     = csm_control(cores = cores, max_iter = MAXIT, penalty = 0, weight_penalty = 0, fix_sigma = TRUE),
+          csmGmm_cor = csm_control(cores = cores, max_iter = MAXIT, penalty = 0, weight_penalty = 0, fix_sigma = R_plug),
+          csmGmm_pen = csm_control(cores = cores, max_iter = MAXIT, fix_sigma = TRUE))
+        tm <- system.time(f <- fit_or_fail(tr$Z, sp, ctl))[["elapsed"]]
+        message(sprintf("replicate %d: %s fit %.1f min, converged %s", r, v, tm / 60, f$converged))
+        info <- list(converged = f$converged, iterations = if (f$converged) sum(f$runs$iterations) else NA,
+                     fit_min = tm / 60, gen_min = gen_min, structure = "B")
+        for (tg in targets) for (t in ts) {
+          if (!f$converged) { res <- rbind(res, row(tg, t, v, rep(FALSE, N), info)); next }
+          lf <- csm_lfdr(f, te$Z, tg, t, cores = cores)
+          su <- csm_stepup(lf, Q)
+          res <- rbind(res, row(tg, t, v, su$rejected, info, score = lf))
         }
       }
     } else {
-      comparison <- switch(
-        method_type,
-        comp_pl = list(target = "pleiotropy", methods = list(
-          QCH = function(z, t) run_qch_pleiotropy_R1(z, t, q, threads = cores),
-          adaFilter = function(z, t) run_adafilter_pleiotropy_R1(z, t, q)
-        )),
-        comp_rp = list(target = "replication", methods = list(
-          repfdr = function(z, t) run_repfdr_replication_R1(z, t, q),
-          DirectionalPC = function(z, t) run_dirpc_replication_R1(z, t, q)
-        )),
-        comp_med = list(target = "mediation", methods = list(
-          DEI = function(z, t) run_dei_mediation_R1(z, t, q),
-          MediationTest = function(z, t) run_mediation_test_R1(z, t, q),
-          PCPathSafeguard = function(z, t) run_mediation_safeguard_R1(z, t, q)
-        )),
-        stop("Unknown method type: ", method_type)
-      )
-      for (threshold in thresholds) for (method_label in names(comparison$methods)) {
-        answer <- tryCatch(comparison$methods[[method_label]](test$Z, threshold),
-                           error = function(e) list(error = conditionMessage(e)))
-        if (!is.null(answer$error)) {
-          rows <- rbind(rows, cbind(make_row(comparison$target, threshold, method_label,
-                                             rep(FALSE, N)), error = answer$error))
-        } else {
-          rows <- rbind(rows, cbind(make_row(comparison$target, threshold, method_label,
-                                             answer$rejected, score = answer$score), error = ""))
-        }
+      comp <- switch(type0,
+        comp_pl  = list(target = "pleiotropy", fns = list(QCH = function(Z, t) run_qch_pleiotropy_R1(Z, t, Q, threads = cores),
+                                                          adaFilter = function(Z, t) run_adafilter_pleiotropy_R1(Z, t, Q))),
+        comp_rp  = list(target = "replication", fns = list(repfdr = function(Z, t) run_repfdr_replication_R1(Z, t, Q),
+                                                           DirectionalPC = function(Z, t) run_dirpc_replication_R1(Z, t, Q))),
+        comp_med = list(target = "mediation", fns = list(DEI = function(Z, t) run_dei_mediation_R1(Z, t, Q),
+                                                         MediationTest = function(Z, t) run_mediation_test_R1(Z, t, Q),
+                                                         PCPathSafeguard = function(Z, t) run_mediation_safeguard_R1(Z, t, Q))),
+        stop("unknown method type: ", type0))
+      for (t in ts) for (m in names(comp$fns)) {
+        o <- tryCatch(comp$fns[[m]](te$Z, t), error = function(e) e)
+        res <- rbind(res, if (inherits(o, "error")) cbind(row(comp$target, t, m, rep(FALSE, N)), error = conditionMessage(o))
+                          else cbind(row(comp$target, t, m, o$rejected, score = o$score), error = ""))
       }
     }
-
-    rows$total_min <- (proc.time()[["elapsed"]] - started) / 60
-    utils::write.csv(rows, destination, row.names = FALSE)
-    message("done: ", destination)
-    invisible(NULL)
+    res$total_min <- (proc.time()[["elapsed"]] - t0) / 60
+    utils::write.csv(res, out, row.names = FALSE)
+    message("done: ", out)
   }
-
-  replicates <- seq.int(task$rep_from, task$rep_to)
-  maximum <- as.integer(Sys.getenv("SIM_MAX_REPS", "0"))
-  if (maximum > 0L) replicates <- utils::head(replicates, maximum)
-  for (replicate in replicates) evaluate_one(replicate)
+  reps <- tk$rep_from:tk$rep_to
+  nmax <- as.integer(Sys.getenv("SIM_MAX_REPS", "0"))   # testing only: first nmax replicates of the task
+  if (nmax > 0L) reps <- utils::head(reps, nmax)
+  for (r in reps) run_rep(r)
   invisible(NULL)
 }

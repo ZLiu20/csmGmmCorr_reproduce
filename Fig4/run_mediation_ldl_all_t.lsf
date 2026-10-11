@@ -1,12 +1,13 @@
-#!/usr/bin/env bash
-#BSUB -J mediation_all_t[1-30]%4
-#BSUB -q long
-#BSUB -W 72:00
+#BSUB -J medldl_t[1-30]
+#BSUB -W 4:00
+#BSUB -o Fig4/errDir/medldl_t_%I.out
+#BSUB -e Fig4/errDir/medldl_t_%I.err
+#BSUB -q medium
 #BSUB -n 4
-#BSUB -M 64
-#BSUB -R "rusage[mem=64]"
-#BSUB -o Fig4/errDir/mediation_all_%J_%I.out
-#BSUB -e Fig4/errDir/mediation_all_%J_%I.err
-set -euo pipefail
+#BSUB -R "span[hosts=1] rusage[mem=16]"
+#BSUB -M 16
+
+# run 1-30   (one task per fit of MEDLDL_JOBS, sorted by folder name; tasks beyond the 23 fits exit; t = 1, ..., 5)
 module load R/4.5.1
-Rscript Fig4/mediation_ldl_all_t.R "${LSB_JOBINDEX:?}"
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript Fig4/mediation_ldl_all_t.R $LSB_JOBINDEX

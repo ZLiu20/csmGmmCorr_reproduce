@@ -1,67 +1,72 @@
-.order_representation <- function(z, target, t) {
+# Incongruity counts for every method (base R only).
+#
+# Order of evidence (as in the paper and csmGmmCorr::csm_adjust): feature j is at least as
+# strong as feature i when both are in the same class and w_j >= w_i coordinatewise.
+#   pleiotropy, mediation: class = sign orthant of z (a zero coordinate: own class), w = |z|
+#     (the order used by Sun, McCaw and Lin for incongruous results);
+#   replication: class = directional branch (+ if the (t+1)-th largest z is at least the
+#     (t+1)-th largest -z, else -), w = z on + and -z on -.
+# Two counts:
+#   incon_dec   : decision level. Number of features that are NOT rejected although they
+#                 dominate (>= in every coordinate, > in at least one) a rejected feature of
+#                 the same class. Applies to any method; zero for the monotone-adjusted rule.
+#   incon_score : score level, Sun et al.'s count. Among features with score < 0.99 (the
+#                 local fdr for our method and QCH; the ranking p-value for the other
+#                 methods), restricted to the INCON_MAX (default 5000) smallest scores,
+#                 the number of features whose score is larger than that of a feature they
+#                 dominate in the same class.
+
+.incon_repr <- function(Z, target, t) {
   if (target == "replication") {
-    rank <- t + 1L
-    ordered <- function(M) apply(M, 1L, function(v) sort(v, decreasing = TRUE)[rank])
-    positive <- ordered(z) >= ordered(-z)
-    list(group = ifelse(positive, "+", "-"),
-         evidence = z * ifelse(positive, 1, -1))
+    k <- t + 1L
+    srt <- function(M) apply(M, 1L, function(v) sort(v, decreasing = TRUE)[k])
+    plus <- srt(Z) >= srt(-Z)
+    list(group = ifelse(plus, "+", "-"), w = Z * ifelse(plus, 1, -1))
   } else {
-    signs <- as.vector(z > 0) * 2^(rep(seq_len(ncol(z)) - 1L, each = nrow(z)))
-    group <- rowSums(matrix(signs, nrow(z), ncol(z)))
-    zero <- rowSums(z == 0) > 0
-    group <- as.character(group)
-    group[zero] <- paste0("z", which(zero))
-    list(group = group, evidence = abs(z))
+    g <- as.vector((Z > 0) %*% 2^(seq_len(ncol(Z)) - 1L))
+    zero <- rowSums(Z == 0) > 0
+    g <- as.character(g); g[zero] <- paste0("z", which(zero))
+    list(group = g, w = abs(Z))
   }
 }
 
-incon_decision <- function(z, rejected, target, t) {
+incon_decision <- function(Z, rejected, target, t) {
   rejected <- as.logical(rejected)
   if (!any(rejected) || all(rejected)) return(0L)
-  representation <- .order_representation(z, target, t)
-  W <- representation$evidence
-  K <- ncol(W)
+  rp <- .incon_repr(Z, target, t); W <- rp$w; K <- ncol(W)
   flagged <- logical(nrow(W))
-  for (group in unique(representation$group[rejected])) {
-    yes <- which(rejected & representation$group == group)
-    no <- which(!rejected & representation$group == group)
-    if (!length(no)) next
-    lower <- apply(W[yes, , drop = FALSE], 2L, min)
-    no <- no[rowSums(W[no, , drop = FALSE] >= rep(lower, each = length(no))) == K]
-    if (!length(no)) next
-    candidates <- W[no, , drop = FALSE]
-    for (j in yes) {
-      boundary <- matrix(W[j, ], nrow(candidates), K, byrow = TRUE)
-      dominates <- rowSums(candidates >= boundary) == K & rowSums(candidates > boundary) > 0L
-      if (any(dominates)) flagged[no[dominates]] <- TRUE
+  for (gr in unique(rp$group[rejected])) {
+    rj <- which(rejected & rp$group == gr); nr <- which(!rejected & rp$group == gr)
+    if (!length(nr)) next
+    lo <- apply(W[rj, , drop = FALSE], 2L, min)                   # can only dominate if >= this
+    nr <- nr[rowSums(W[nr, , drop = FALSE] >= rep(lo, each = length(nr))) == K]
+    if (!length(nr)) next
+    Wn <- W[nr, , drop = FALSE]
+    for (j in rj) {
+      wj <- rep(W[j, ], each = length(nr))
+      dom <- rowSums(Wn >= wj) == K & rowSums(Wn > wj) > 0
+      if (any(dom)) flagged[nr[dom]] <- TRUE
     }
   }
   sum(flagged)
 }
 
-incon_score <- function(z, score, target, t,
-                        max_n = as.integer(Sys.getenv("INCON_MAX", "5000"))) {
+incon_score <- function(Z, score, target, t, max_n = as.integer(Sys.getenv("INCON_MAX", "5000"))) {
   if (is.null(score) || all(is.na(score))) return(NA_integer_)
   keep <- which(is.finite(score) & score < 0.99)
   if (length(keep) <= 1L) return(0L)
   keep <- keep[order(score[keep])][seq_len(min(length(keep), max_n))]
-  representation <- .order_representation(z[keep, , drop = FALSE], target, t)
-  W <- representation$evidence
-  s <- score[keep]
-  violations <- 0L
-  for (group in unique(representation$group)) {
-    members <- which(representation$group == group)
-    if (length(members) < 2L) next
-    members <- members[do.call(order, c(list(s[members]),
-                                       lapply(seq_len(ncol(W)), function(k) -W[members, k])))]
-    ordered_W <- W[members, , drop = FALSE]
-    for (i in 2:length(members)) {
-      previous <- ordered_W[seq_len(i - 1L), , drop = FALSE]
-      current <- matrix(ordered_W[i, ], i - 1L, ncol(W), byrow = TRUE)
-      if (any(rowSums(previous <= current) == ncol(W) & rowSums(previous < current) > 0L)) {
-        violations <- violations + 1L
-      }
+  rp <- .incon_repr(Z[keep, , drop = FALSE], target, t); W <- rp$w; K <- ncol(W); s <- score[keep]
+  n_bad <- 0L
+  for (gr in unique(rp$group)) {
+    m <- which(rp$group == gr)
+    if (length(m) < 2L) next
+    m <- m[do.call(order, c(list(s[m]), lapply(seq_len(K), function(k) -W[m, k])))]   # Sun's ordering
+    Wm <- W[m, , drop = FALSE]
+    for (i in 2:length(m)) {
+      prev <- Wm[seq_len(i - 1L), , drop = FALSE]; wi <- rep(Wm[i, ], each = i - 1L)
+      if (any(rowSums(prev <= wi) == K & rowSums(prev < wi) > 0)) n_bad <- n_bad + 1L
     }
   }
-  violations
+  n_bad
 }

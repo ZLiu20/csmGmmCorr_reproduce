@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 #BSUB -J main_comp_med[1-960]%200
 #BSUB -W 16:00
 #BSUB -o Fig2/errDir/main_comp_med_%I.out
@@ -8,7 +7,9 @@
 #BSUB -R "span[hosts=1] rusage[mem=16]"
 #BSUB -M 16
 
-set -euo pipefail
+# run 1-960
+# Submit from the repository root:  bsub < Fig2/run_main_comp_med.lsf
+# (queue, memory unit and module name may need to be adapted to the cluster)
 module load R/4.5.1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
-Rscript Fig2/main_comp_med_sim.R "$LSB_JOBINDEX"
+Rscript Fig2/main_comp_med_sim.R $LSB_JOBINDEX

@@ -1,19 +1,21 @@
 Package: mediation.test
 Title: More Powerful Tests of the Composite Null Hypothesis Arising in Mediation Analysis
 Version: 1.2.5
-Date: 2025-07-14
+Published: 14/07/2025
 Authors@R: c(
-    person("Antoine", "Chambaz", role = c("aut", "cre"),
+    person(given = "Antoine",
+           family = "Chambaz",
+           role = c("aut", "cre"),
            email = "antoine.chambaz@u-paris.fr"),
-    person("Caleb", "Miles", role = "aut",
+    person(given = "Caleb",
+           family = "Miles",
+           role = c("aut"),
            email = "cm3825@cumc.columbia.edu"))
-Description: Implements minimax and Bayes-risk tests for the product-null
-    hypothesis encountered in mediation analysis, together with multiple-testing
-    variants and utilities for constructing rejection-probability maps.
+Description: This packages proposes more powerful tests of the composite null hypothesis arising in mediation analysis.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Imports:
+Imports: 
     dplyr,
     ggplot2,
     lpSolve,
@@ -25,9 +27,13 @@ Imports:
     tibble,
     tidyr,
     utils
-Suggests:
+Suggests: 
     knitr,
-    MASS
-Depends: R (>= 2.10)
+    MASS,
+    rmarkdown
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: 
+    R (>= 2.10)
 URL: https://achambaz.github.io/mediation.test/
 VignetteBuilder: knitr
