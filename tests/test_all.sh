@@ -52,7 +52,7 @@ report)
   mkdir -p tests/logs
   Rscript SuppTab4/make_supptab4.R > tests/logs/make_supptab4.log 2>&1
   for f in tests/errDir/smoke_*.err; do grep -l -i "error" $f; done > tests/logs/smoke_errors.txt 2>/dev/null
-  ls Fig2/output_smoke/*/* Fig3/output_smoke/*/* Tab2/output_smoke/*/* SuppTab*/output_smoke/*/* 2>/dev/null | wc -l > tests/logs/smoke_count.txt
+  find Fig2/output_smoke Fig3/output_smoke Tab2/output_smoke SuppTab*/output_smoke -name "*.csv" 2>/dev/null | wc -l > tests/logs/smoke_count.txt   # expected: 64 (one file per array)
   tar czf tests/report.tar.gz tests/*.log tests/logs tests/errDir/smoke_rd.* tests/errDir/glgc_prep.* \
       Fig1/*.pdf Fig1/*.txt Fig2/*.pdf Fig3/*.pdf Fig4/*.pdf Fig4/*.tex Fig4/*.txt Fig4/output/holdout_validation.csv SuppFig1/*.pdf \
       Tab1/*.tex Tab2/*.tex SuppTab*/*.tex SuppTab*/*.csv SuppTab4/output 2>/dev/null
