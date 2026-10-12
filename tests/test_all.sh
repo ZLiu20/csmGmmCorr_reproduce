@@ -49,6 +49,7 @@ Rscript tests/compare_glgc_prep.R "$RAW" "$(readlink -f Data/prepared/glgc_repli
 JOB
   ;;
 report)
+  mkdir -p tests/logs
   Rscript SuppTab4/make_supptab4.R > tests/logs/make_supptab4.log 2>&1
   for f in tests/errDir/smoke_*.err; do grep -l -i "error" $f; done > tests/logs/smoke_errors.txt 2>/dev/null
   ls Fig2/output_smoke/*/* Fig3/output_smoke/*/* Tab2/output_smoke/*/* SuppTab*/output_smoke/*/* 2>/dev/null | wc -l > tests/logs/smoke_count.txt
