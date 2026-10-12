@@ -25,7 +25,7 @@ theme_paper <- function(base = 16) {
 }
 fdp_line <- function() ggplot2::geom_hline(yintercept = 0.1, linetype = 2, color = "grey")
 # Upper limit of the FDP axis: at least 0.2, otherwise the next multiple of 0.1 above the data.
-fdp_top <- function(x) max(0.2, ceiling(max(x, na.rm = TRUE) * 1.05 * 10) / 10)
+fdp_top <- function(x) max(0.2, ceiling(max(x, na.rm = TRUE) * 1.05 * 20) / 20)
 
 # One panel: y against the design value x for each method (penalized fit with sign-symmetric
 # statistics added as a green line with points when sym is given).
