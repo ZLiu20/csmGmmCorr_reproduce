@@ -19,7 +19,7 @@ for (tg in c("pleiotropy", "replication", "mediation")) for (what in c("FDP", "p
     scale_x_continuous(breaks = c(0, 0.2, 0.4, 0.6, 0.8)) +
     xlab(expression("Correlation " * rho)) +
     ylab(sprintf("%s (%s)", if (what == "FDP") "FDP" else "Power", TARGET_NAME[[tg]])) + theme_paper()
-  p <- if (what == "FDP") p + fdp_line() + coord_cartesian(ylim = c(0, 0.5)) else p + coord_cartesian(ylim = c(0, 1))
+  p <- if (what == "FDP") p + fdp_line() + coord_cartesian(ylim = c(0, fdp_top(z$FDP))) else p + coord_cartesian(ylim = c(0, 1))
   panels[[length(panels) + 1]] <- p
 }
 lg <- ggplot(data.frame(x = rep(1:2, 4), y = 1, Setting = factor(rep(levels(R$Setting), each = 2), levels = levels(R$Setting))),
