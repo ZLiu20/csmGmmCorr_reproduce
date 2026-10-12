@@ -11,7 +11,7 @@ cell <- function(tg, f) { r <- g[target == tg & fit == f]; sprintf("%.3f (%.3f),
 L <- c("\\begin{table}[htbp]", "\\centering",
   sprintf(paste0("\\caption{Mean FDP (Monte Carlo standard error) and mean power over %d replicates for the oracle posterior ",
     "and for exchangeable-restriction fits with two floors. The design is described in the text.}\\label{tab:floor-bias}"), max(g$n)),
-  "\\begin{tabular}{@{}lccc@{}}", "\\toprule", "Target & Oracle & $a_\\omega=1/64$ & $a_\\omega=10^{-4}$\\\\", "\\midrule")
+  "\\begin{tabular}{@{}lccc@{}}", "\\toprule", "Target & Oracle & Floor $1/64$ & Floor $10^{-4}$\\\\", "\\midrule")
 for (tg in c("pleiotropy", "replication", "mediation"))
   L <- c(L, sprintf("%s & %s & %s & %s\\\\", TARGET_NAME[[tg]], cell(tg, "oracle"), cell(tg, "floor_0.015625"), cell(tg, "floor_0.0001")))
 write_tex(c(L, "\\bottomrule", "\\end{tabular}", "\\end{table}"), here::here("SuppTab4", "SuppTab4.tex"))
