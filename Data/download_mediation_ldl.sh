@@ -1,6 +1,6 @@
 #!/bin/bash
 # Downloads for the three-mediator LDL application (Data/prepare_mediation_ldl.R), about 4 GB:
-#   GTEx v10 liver cis-eQTL statistics of all tested variant-gene pairs, eQTL Catalogue dataset
+#   GTEx v8 liver cis-eQTL statistics of all tested variant-gene pairs, eQTL Catalogue dataset
 #     QTD000266 (QTD000266.all.tsv.gz, 2.9 GB), and the GENCODE v26 gene annotation of GTEx (TSS)
 #   GTEx v8 variant lookup table (build-38 variant IDs with their build-37 positions)
 #   GTEx v8 MASHR expression-prediction models (Barbeira et al. 2021; liver model and covariances)
