@@ -2,8 +2,8 @@
 #   exposure = a genetic variant (SNP), M1, M2, M3 = the liver expression of three genes near it,
 #   outcome Y = LDL cholesterol. One feature per variant, coordinates in mediation order
 #   (alpha1, beta1, alpha2, beta2, alpha3, beta3):
-#     alpha_g : SNP -> M_g, liver cis-eQTL z of the variant for gene g (beta / se, ALT allele): GTEx v10
-#               liver, all tested variant-gene pairs as reprocessed by the eQTL Catalogue (QTD000266, n = 261)
+#     alpha_g : SNP -> M_g, liver cis-eQTL z of the variant for gene g (beta / se, ALT allele): GTEx v8
+#               liver, all tested variant-gene pairs as reprocessed by the eQTL Catalogue (QTD000266, n = 208)
 #     beta_g  : M_g -> Y,   S-PrediXcan z of gene g (GTEx v8 MASHR liver model, GLGC EUR LDL)
 #   With G = 3, t = 1 and t = 2 are both mediation targets (for t >= G the mediation and
 #   pleiotropy nulls coincide; main-text Section 2.1).
