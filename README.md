@@ -76,10 +76,6 @@ FAILED. `logs/versions.txt` records the R and package versions.
   way.
 - Run times:
   - Each simulation task runs 10 replicates of 100,000 features.
-  - With 4 threads, the penalized fit of one replicate took a median of about 0.5 minutes at
-    K = 4 and 1.5 minutes at K = 6; maximum likelihood took about three times as long. The
-    generation of the data takes under a minute (pleiotropy, replication) to about 3 minutes
-    (mediation) per replicate.
   - The `-W` values in the `.lsf` files are upper bounds per task. The total time of a folder
     depends on how many tasks run at once (at most 200 per array, set by `%200`).
 
