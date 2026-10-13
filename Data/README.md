@@ -86,7 +86,7 @@ Rscript Fig4/summarize_mediation_ldl.R
 Rscript SuppTab24/make_supptab24_26.R          # Supplementary Tables 24-26
 ```
 
-Inputs: liver cis-eQTL statistics of all tested variant-gene pairs (GTEx v10, eQTL Catalogue dataset
+Inputs: liver cis-eQTL statistics of all tested variant-gene pairs (GTEx v8, eQTL Catalogue dataset
 QTD000266), the GENCODE v26 gene annotation of GTEx, the GTEx v8 variant lookup table, the GTEx v8 MASHR liver expression model (Barbeira et al. 2021) and the GLGC 2021
 EUR LDL results (female and male, from `download_data.sh`). The design is described at the top of
 `Data/prepare_mediation_ldl.R`:
