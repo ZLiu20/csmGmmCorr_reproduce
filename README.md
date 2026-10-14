@@ -1,7 +1,7 @@
 # csmGmmCorr_reproduce
 
 Code to reproduce the simulations, the data analyses, and every figure and table of the paper
-"Correlated csmGmm: Composite Null Testing and Posterior Ranking in Genome-Wide Studies" by Zili
+"Composite Null Testing with Correlated Statistics in Genome-Wide Studies" by Zili
 Liu and Ryan Sun,
 and of its Supplementary Material.
 
