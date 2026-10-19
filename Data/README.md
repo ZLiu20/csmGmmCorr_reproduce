@@ -73,8 +73,8 @@ male). The HIS and SAS strata are used only for the held-out validation
 
 ## Mediation application (lung squamous cell carcinoma, three tissues)
 
-These data are **not public** and are not distributed with this repository. They were provided
-by R. Sun (see the Data Availability statement of the paper):
+These data are **not public** and are not distributed with this repository. They are available
+from the authors upon reasonable request (see the Data and Code Availability statement of the paper):
 
 - GTEx v8 eQTL statistics of the 15 lung cancer risk variants of McKay et al. (2017) for every gene,
   in lung, whole blood and liver;
