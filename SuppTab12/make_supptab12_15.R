@@ -1,6 +1,6 @@
-# Supplementary Tables 12-15 (robustness studies):
+# Supplementary Tables S8-S11 (robustness studies; folder numbering 12-15):
 #   12  mean FDP at t = 2 under alternative estimators and data-generating processes
-#   13  mean power for the settings of Table 2 and Supplementary Table 12
+#   13  mean power for the settings of Table 2 and Supplementary Table S8
 #   14  linkage disequilibrium study: variant-level, locus-level and union-of-effects FDP
 #   15  replication comparators (repfdr, directional partial conjunction) by design
 # Arrays of this folder: main_comp_rp (Table 15). Uses the output of Fig2, Fig3 and Tab2.

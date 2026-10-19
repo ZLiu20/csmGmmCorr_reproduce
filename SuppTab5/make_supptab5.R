@@ -1,4 +1,4 @@
-# Supplementary Table 5: simulation designs (from design_table() in SupportingCode/sim_data.R).
+# Supplementary Table S2: simulation designs (from design_table() in SupportingCode/sim_data.R).
 #   Rscript SuppTab5/make_supptab5.R
 here::i_am("SuppTab5/make_supptab5.R")
 source(here::here("SupportingCode", "load_all.R"))

@@ -14,7 +14,7 @@ paths.
 
 | Analysis | Source | Files |
 |---|---|---|
-| GLGC lipid pleiotropy (Supplementary Section 8.6) | GLGC 2021 trans-ancestry results, https://csg.sph.umich.edu/willer/public/glgc-lipids2021/results/trans_ancestry/ | `with_BF_meta-analysis_AFR_EAS_EUR_HIS_SAS_{HDL,LDL,TC,logTG,nonHDL}_INV_ALL_with_N_1.gz` |
+| GLGC lipid pleiotropy (Supplementary Section S5.5) | GLGC 2021 trans-ancestry results, https://csg.sph.umich.edu/willer/public/glgc-lipids2021/results/trans_ancestry/ | `with_BF_meta-analysis_AFR_EAS_EUR_HIS_SAS_{HDL,LDL,TC,logTG,nonHDL}_INV_ALL_with_N_1.gz` |
 | GLGC replication (Section 6) | GLGC 2021 sex- and ancestry-specific results, https://csg.sph.umich.edu/willer/public/glgc-lipids2021/results/sex_and_ancestry_specific_summary_stats/ | `LDL_INV_{AFR_HRC_1KGP3_others,EAS_1KGP3,EUR_HRC_1KGP3_others,HIS_1KGP3,SAS_HRC_1KGP3_others}_{FEMALE,MALE}.meta.singlevar.results.gz` |
 | UK Biobank pleiotropy (Section 6) | Neale lab round 2, https://broad-ukb-sumstats-us-east-1.s3.amazonaws.com/round2/additive-tsvs/ | `{21001,4080,30870,30760,30750}_irnt.gwas.imputed_v3.both_sexes.tsv.bgz` (BMI, SBP, TG, HDL, HbA1c) |
 
@@ -32,7 +32,7 @@ This runs three jobs. Each needs up to 8 hours and 64 GB of memory.
 | 2 | `Rscript Data/prepare_glgc.R pleiotropy` | `glgc_pleiotropy/` | 9,917,860 (264,749) |
 | 3 | `Rscript Data/prepare_ukb.R` | `ukb_pleiotropy/` | 9,370,133 (264,709) |
 
-The GLGC steps are described in Supplementary Section 8.2 and implemented in
+The GLGC steps are described in Supplementary Section S5.2 and implemented in
 `SupportingCode/glgc_prepare.R`. The coordinates of each analysis are listed in
 `Data/glgc_*_manifest.tsv`, and the steps are:
 
@@ -44,7 +44,7 @@ The GLGC steps are described in Supplementary Section 8.2 and implemented in
 - statistics capped at ±12;
 - one fitting variant per 10-kb window, chosen by a hash of the variant key.
 
-The UK Biobank steps are described in Supplementary Section 8.1:
+The UK Biobank steps are described in Supplementary Section S5.1:
 
 - autosomal variants that are not low-confidence for any trait;
 - minor allele frequency at least 0.01;

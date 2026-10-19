@@ -7,7 +7,7 @@ The three scripts in this folder compare csmGmmCorr with the csmGmm package of S
 |---|---|---|
 | `validate_csmgmm.R` | csmGmm's EM started at our estimate (K = 4, Sigma = I; K = 2, fixed correlation); both fitted from the same start | `validate_csmgmm_log.txt` |
 | `validate2_csmgmm.R` | A. one EM step from the same parameters; B. full fits from the same start on well-identified data (log-likelihood, lfdr, rejections); C. log-likelihood of both solutions on the sparse simulation data of `validate_csmgmm.R` | `validate2_log.txt` |
-| `diag_incon.R` | our incongruity count against `csmGmm::check_incongruous`, and the diagnostics of Supplementary Section 7.3 | `diag_incon_log.txt` |
+| `diag_incon.R` | our incongruity count against `csmGmm::check_incongruous`, and the diagnostics of Supplementary Section S4.6.3 | `diag_incon_log.txt` |
 
 The numbers of Supplementary Sections 6.4 (comparison with csmGmm) and 7.3 come from
 `validate2_log.txt` (parts A and B) and `diag_incon_log.txt`.
@@ -24,7 +24,7 @@ Changes from 0.4.0 (commit `a116d45`, 2025-09-16) to 0.5.0 in the functions used
   from `TRUE` to `FALSE`, and the progress output from `cat()` to `message()`. The EM iterations
   themselves are unchanged, so the fits are the same under both versions.
 - `check_incongruous`: support for K = 4 was added (`find_4d`); in 0.4.0 the function stopped for
-  K > 3. The K = 4 counts of Supplementary Section 7.3 therefore require 0.5.0 (or the upstream
+  K > 3. The K = 4 counts of Supplementary Section S4.6.3 therefore require 0.5.0 (or the upstream
   commit `c97c98c`, 2025-12-30, which already contained this change under the version number 0.4.0).
 
 ## Reading the first check of `validate_csmgmm.R`

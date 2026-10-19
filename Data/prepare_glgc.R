@@ -1,4 +1,4 @@
-# Prepare the GLGC analyses (SupportingCode/glgc_prepare.R; Supplementary Section 8.2).
+# Prepare the GLGC analyses (SupportingCode/glgc_prepare.R; Supplementary Section S5.2).
 #   Rscript Data/prepare_glgc.R replication     -> Data/prepared/glgc_replication/
 #   Rscript Data/prepare_glgc.R pleiotropy      -> Data/prepared/glgc_pleiotropy/
 # About 1-2 hours and 48 GB of memory per analysis (bsub < Data/run_prepare.lsf).

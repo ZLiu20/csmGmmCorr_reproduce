@@ -2,7 +2,7 @@
 # Download the public summary statistics used in the applications (about 25 GB in total).
 # Run from the repository root on a node with internet access:   bash Data/download_data.sh
 #   GLGC (Graham et al. 2021; https://csg.sph.umich.edu/willer/public/glgc-lipids2021/):
-#     five trans-ancestry lipid files (pleiotropy, Supplementary Section 8.6) and the LDL files
+#     five trans-ancestry lipid files (pleiotropy, Supplementary Section S5.5) and the LDL files
 #     of ten ancestry-by-sex strata (replication; HIS and SAS are held out for validation)
 #   UK Biobank, Neale lab round 2 (http://www.nealelab.is/uk-biobank): five traits, both sexes,
 #     imputed v3, inverse-rank-normalized (irnt): BMI 21001, SBP 4080, TG 30870, HDL 30760, HbA1c 30750

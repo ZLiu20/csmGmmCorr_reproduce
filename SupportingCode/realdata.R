@@ -1,8 +1,8 @@
-# Applications (main-text Section 6; Supplementary Section 8).
+# Applications (main-text Section 6; Supplementary Section S5).
 #   glgc_replication  replication of LDL-cholesterol association across six GLGC ancestry-by-sex
 #                     strata (K = 6); the Hispanic and South Asian strata are held out
 #   ukb_pleiotropy    pleiotropy across five metabolic-syndrome traits, UK Biobank (K = 5)
-#   glgc_pleiotropy   pleiotropy across five GLGC lipid traits (K = 5; Supplementary Section 8.6)
+#   glgc_pleiotropy   pleiotropy across five GLGC lipid traits (K = 5; Supplementary Section S5.5)
 # Inputs: Data/prepared/<analysis>/ (Data/prepare_glgc.R, Data/prepare_ukb.R):
 #   fit_sample.tsv.gz (one variant per occupied 10-kb window; used to fit the model),
 #   chr<k>.tsv.gz and chromosome_manifest.tsv (all variants; the test set is every variant

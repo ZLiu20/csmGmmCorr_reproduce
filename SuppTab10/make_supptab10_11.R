@@ -1,4 +1,4 @@
-# Supplementary Tables 10-11: comparison with the csmGmm of Sun, McCaw and Lin (Sigma = I),
+# Supplementary Tables S3-S4: comparison with the csmGmm of Sun, McCaw and Lin (Sigma = I),
 # the plug-in Sigma and the penalized fit with Sigma = I, in the main simulation (designs 1-9;
 # arrays main_comp_*_csm of the Tab2 folder) and in the correlation study (rho_comp_*_csm of the
 # Fig3 folder). The correlated csmGmm is taken from Fig2 and Fig3.

@@ -81,6 +81,9 @@ FAILED. `logs/versions.txt` records the R and package versions.
 
 ## Figures and tables
 
+The folder names of the supplementary tables follow an earlier numbering; the first column gives
+the numbers of the submitted Supplementary Material.
+
 | Paper | Folder | Arrays (tasks) | Script |
 |---|---|---|---|
 | Figure 1 (Example 1, Sections 3.1 and 4.1) | Fig1 | none (exact computation, seconds) | plot_fig1.R |
@@ -90,19 +93,19 @@ FAILED. `logs/versions.txt` records the R and package versions.
 | Table 2 | Tab2 | 16 arrays (2,440 tasks): csmGmm comparison, quantitative outcomes, exchangeable correlation, linkage disequilibrium, independent test set, null-correlation oracle; uses Fig2 and Fig3 | make_tab2.R |
 | Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/`; the mediation column of Table 3 and Figure 4 also needs the lung SCC fits below | make_tab3.R, holdout_validation.R, plot_fig4.R, plot_fig5.R |
 | Mediation application (main-text Section 6.3; Supplementary Section S5.7, Tables S20-S25, Figures S13-S14) | Fig4 | `run_mediation_scc.lsf` (11 fits), `run_mediation_scc_cap.lsf` (4 fits); requires the non-public data of `Data/README.md` | mediation_scc_compare.R, mediation_scc_mvp.R, mediation_scc_report.R |
-| Supplementary Figures 1-12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
-| Supplementary Table 1 | none | roadmap, text only | |
-| Supplementary Table 2 | SuppTab2 | none (exact counts) | make_supptab2.R |
-| Supplementary Table 3 | SuppTab3 | 18 arrays (720 tasks): penalty constants | make_supptab3.R |
-| Supplementary Table 4 | SuppTab4 | `run_SuppTab4.lsf` (10 tasks): weight floors | make_supptab4.R |
-| Supplementary Table 5 | SuppTab5 | none (design table) | make_supptab5.R |
-| Supplementary Tables 6-8 | SuppTab6 | uses Fig2, Fig3 | make_supptab6_8.R |
-| Supplementary Table 9 | SuppTab9 | 6 arrays (240 tasks): numbers of magnitude components | make_supptab9.R |
-| Supplementary Tables 10-11 | SuppTab10 | uses Tab2, Fig2, Fig3 | make_supptab10_11.R |
-| Supplementary Tables 12-15 | SuppTab12 | 1 array (480 tasks): repfdr and directional PC; uses Fig2, Fig3, Tab2 | make_supptab12_15.R |
-| Supplementary Tables 16-18 | SuppTab16 | uses Fig2 | make_supptab16_18.R |
-| Supplementary Tables 19-23 | SuppTab19 | uses Fig4 | make_supptab19_23.R |
-| Package checks (Supplementary Section 2.7) | Validation | none | validate_csmgmm.R, validate2_csmgmm.R, diag_incon.R |
+| Supplementary Table S1 | SuppTab2 | none (exact counts) | make_supptab2.R |
+| Supplementary Table S2 | SuppTab5 | none (design table) | make_supptab5.R |
+| Supplementary Tables S3-S4 | SuppTab10 | uses Tab2, Fig2, Fig3 | make_supptab10_11.R |
+| Supplementary Table S5 | SuppTab3 | 18 arrays (720 tasks): penalty constants | make_supptab3.R |
+| Supplementary Table S6 | SuppTab4 | `run_SuppTab4.lsf` (10 tasks): weight floors | make_supptab4.R |
+| Supplementary Table S7 | SuppTab9 | 6 arrays (240 tasks): numbers of magnitude components | make_supptab9.R |
+| Supplementary Tables S8-S11 | SuppTab12 | 1 array (480 tasks): repfdr and directional PC; uses Fig2, Fig3, Tab2 | make_supptab12_15.R |
+| Supplementary Tables S12-S14 | SuppTab16 | uses Fig2 | make_supptab16_18.R |
+| Supplementary Tables S15-S19 | SuppTab19 | uses Fig4 (S18: `Fig4/holdout_validation.R`) | make_supptab19_23.R |
+| Supplementary Tables S20-S25, Figures S13-S14 | Fig4 | lung SCC mediation (row above); S20 from `Data/mediation/mediation_scc_cis_counts.tsv`, S21 from `Fig4/output/mediation_scc/cis15_main/sigma.tsv`, S24 from `mediation_scc_compare.R` | mediation_scc_report.R |
+| Supplementary Tables S26-S28 | SuppTab6 | uses Fig2, Fig3 | make_supptab6_8.R |
+| Supplementary Figures S1-S12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
+| Package checks (Supplementary Sections S4.3 and S4.6) | Validation | none | validate_csmgmm.R, validate2_csmgmm.R, diag_incon.R |
 
 Upper bounds on the wall time per task (`-W`):
 
@@ -143,7 +146,7 @@ SupportingCode/      code sourced by all scripts (load_all.R)
   run_sim_task.R       one task: data, fits, decisions, FDP, power and incongruity counts
   comparators/         QCH, adaFilter, repfdr, directional PC, DEI, MediationTest, JS-PC
   incongruity.R        incongruity counts (score and decision level)
-  floor_study.R        weight-floor study (Supplementary Section 2.6)
+  floor_study.R        weight-floor study (Supplementary Section S4.4.2)
   realdata.R           applications: loading, fitting, inference, clumping
   glgc_prepare.R       preparation of the GLGC statistics
   summarize.R          reading and summarizing the simulation output, table helpers

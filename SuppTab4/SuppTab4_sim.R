@@ -1,4 +1,4 @@
-# Supplementary Table 4: one replicate of the weight-floor study (Supplementary Section 2.6).
+# Supplementary Table S6: one replicate of the weight-floor study (Supplementary Section S4.4.2).
 #   Rscript SuppTab4/SuppTab4_sim.R <replicate 1-10>      (or bsub < SuppTab4/run_SuppTab4.lsf)
 here::i_am("SuppTab4/SuppTab4_sim.R")
 source(here::here("SupportingCode", "load_all.R"))

@@ -1,4 +1,4 @@
-# Supplementary Table 4: mean FDP (Monte Carlo s.e.) and mean power over 10 replicates for the
+# Supplementary Table S6: mean FDP (Monte Carlo s.e.) and mean power over 10 replicates for the
 # oracle posterior and for exchangeable-restriction fits with floors 1/64 and 1e-4.
 #   Rscript SuppTab4/make_supptab4.R
 here::i_am("SuppTab4/make_supptab4.R")

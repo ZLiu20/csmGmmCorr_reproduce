@@ -1,4 +1,4 @@
-# Supplementary Tables 19-23 (details of the applications), from the output of the Fig4 folder:
+# Supplementary Tables S15-S19 (details of the applications; folder numbering 19-23), from the output of the Fig4 folder:
 #   19 coordinates of the GLGC analyses (fixed), 20 all fits, 21 fitted and empirical
 #   correlations, 22 sensitivity to a_mu, 23 replication in held-out strata
 #   (Fig4/holdout_validation.R must have been run).

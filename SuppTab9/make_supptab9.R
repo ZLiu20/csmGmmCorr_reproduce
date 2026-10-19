@@ -1,4 +1,4 @@
-# Supplementary Table 9: sensitivity to the number of magnitude components (structures A = 1/1,
+# Supplementary Table S7: sensitivity to the number of magnitude components (structures A = 1/1,
 # B = 2/1 (main), C = 2/2 for supports of size one / larger; replicates 1-50 of designs 1, 5, 7;
 # B is taken from the Fig2 output).  Rscript SuppTab9/make_supptab9.R
 here::i_am("SuppTab9/make_supptab9.R")

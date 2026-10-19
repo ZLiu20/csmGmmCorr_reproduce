@@ -1,4 +1,4 @@
-# Supplementary Table 3: sensitivity to the penalty constants lambda_mu and lambda_w
+# Supplementary Table S5: sensitivity to the penalty constants lambda_mu and lambda_w
 # (replicates 1-50 of designs 1, 5, 7; the main setting lambda_mu = 30, lambda_w = 10 is taken
 # from the Fig2 output, replicates 1-50).  Rscript SuppTab3/make_supptab3.R
 here::i_am("SuppTab3/make_supptab3.R")

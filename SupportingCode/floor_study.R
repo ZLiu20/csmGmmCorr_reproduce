@@ -1,8 +1,8 @@
-# Supplementary Section 2.6 (Table 4): effect of a lower bound a_omega on the fitted
+# Supplementary Section S4.4.2 (Table S6): effect of a lower bound a_omega on the fitted
 # support-size probabilities. Sparse design: K = 4, t = 1, q = 0.10, support-size probabilities
 # (0.93, 0.05, 0.012, 0.005, 0.003), magnitudes (2.5, 3, 2.5, 3), equicorrelation 0.3,
 # N = J = 20,000 independent training and test features per replicate.
-# Fitted model: the exchangeable restriction (Supplementary Section 1.2), i.e. magnitudes
+# Fitted model: the exchangeable restriction (Supplementary Section S1.1), i.e. magnitudes
 # mu_k shared by all supports and the probability omega_s of support size s spread uniformly
 # over the supports and signs of that size, fitted by EM with omega_s >= a_omega for every s.
 # Written independently of csmGmmCorr (which has no weight floor).

@@ -1,4 +1,4 @@
-# Supplementary Tables 16-18: incongruous results (averaged over designs, Table 16; by design,
+# Supplementary Tables S12-S14 (folder numbering 16-18): incongruous results (averaged over designs, Table 16; by design,
 # Table 17) and the cost of the monotone adjustment (Table 18), main simulation.
 # Uses the output of Fig2:  Rscript SuppTab16/make_supptab16_18.R
 here::i_am("SuppTab16/make_supptab16_18.R")

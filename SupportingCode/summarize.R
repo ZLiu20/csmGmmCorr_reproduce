@@ -55,7 +55,7 @@ fcomma <- function(x) ifelse(is.na(x), "--", gsub(",", "{,}", formatC(x, format 
 tex_escape <- function(x) gsub("_", "\\\\_", x)
 write_tex <- function(lines, file) { writeLines(lines, file); message("wrote ", file) }
 
-# Table 2 / Supplementary Tables 12-13: mean FDP (or power) under alternative estimators and
+# Table 2 / Supplementary Tables S8-S9: mean FDP (or power) under alternative estimators and
 # data-generating processes, averaged over designs 1, 5, 7 (rho = 0.8 block: fifth effect-size
 # design of the correlation study). Returns one row per (target, K, t), one column per setting.
 SOURCE_ROWS <- list(
@@ -105,7 +105,7 @@ sources_means <- function(value = "FDP") {
   out
 }
 
-# LaTeX version of Table 2 (t = 1) and Supplementary Table 12 (t = 2).
+# LaTeX version of Table 2 (t = 1) and Supplementary Table S8 (t = 2).
 sources_tex <- function(T, t0, label, caption) {
   L <- c("\\begin{table}[!htbp]", "\\centering", sprintf("\\caption{%s}\\label{%s}", caption, label), "\\small",
          "\\begin{tabular}{l cc cc cc}", "\\toprule",

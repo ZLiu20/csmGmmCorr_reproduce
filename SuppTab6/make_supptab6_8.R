@@ -1,4 +1,4 @@
-# Supplementary Tables 6-8: design-level results of the main simulation (Table 6), with
+# Supplementary Tables S26-S28 (folder numbering 6-8): design-level results of the main simulation (Table 6), with
 # sign-symmetric statistics (Table 7) and of the correlation study (Table 8).
 # Uses the output of Fig2 and Fig3:  Rscript SuppTab6/make_supptab6_8.R
 here::i_am("SuppTab6/make_supptab6_8.R")

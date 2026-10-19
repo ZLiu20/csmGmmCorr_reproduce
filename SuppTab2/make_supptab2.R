@@ -1,4 +1,4 @@
-# Supplementary Table 2: represented and alternative-state counts at t = 2 for the full model
+# Supplementary Table S1: represented and alternative-state counts at t = 2 for the full model
 # (S = K) and for a restriction to supports of size at most S = 4 at K = 10 (exact counts).
 #   Rscript SuppTab2/make_supptab2.R
 here::i_am("SuppTab2/make_supptab2.R")

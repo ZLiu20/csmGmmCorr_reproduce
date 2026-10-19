@@ -1,4 +1,4 @@
-# Prepare the UK Biobank pleiotropy analysis (Supplementary Section 8.1) in the format of the
+# Prepare the UK Biobank pleiotropy analysis (Supplementary Section S5.1) in the format of the
 # GLGC analyses: Data/prepared/ukb_pleiotropy/chr<k>.tsv.gz (variant_id, chr, pos_b37, BMI, SBP,
 # TG, HDL, HbA1c), chromosome_manifest.tsv and fit_sample.tsv.gz (one variant per occupied
 # 10-kb window, chosen at random with a fixed seed).

@@ -1,4 +1,4 @@
-# Preparation of the GLGC summary statistics (Supplementary Section 8.2).
+# Preparation of the GLGC summary statistics (Supplementary Section S5.2).
 #
 # For each analysis (manifest Data/glgc_<analysis>_manifest.tsv, one row per coordinate):
 #   * per source: build-37 autosomal positions, REF/ALT upper case (ALT is the effect allele),

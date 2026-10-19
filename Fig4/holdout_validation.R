@@ -1,5 +1,5 @@
 # Replication in the held-out Hispanic and South Asian strata (main-text Section 6;
-# Supplementary Section 8.5 and Table 23). For the lead variant of each locus (greedy clumping,
+# Supplementary Section S5.4 and Table S18). For the lead variant of each locus (greedy clumping,
 # +-500 kb), the direction d is the sign of the sum of its six analysed statistics and
 # S = d (z_HIS,F + z_HIS,M + z_SAS,F + z_SAS,M) / 2 combines the four held-out strata.
 #   Rscript Fig4/holdout_validation.R      (after the replication fits)

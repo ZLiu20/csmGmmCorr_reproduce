@@ -54,15 +54,15 @@ sim_arrays <- function() {
     add(sprintf("main_ours_%s_ml", sc),  "Fig2", "main", sprintf("ours_%s_ml", sc), 1:12, c(1L, 200L))
     add(sprintf("sym_ours_%s_pen", sc),  "Fig2", "sym",  sprintf("ours_%s_pen", sc), 1:12, c(1L, 200L))
     add(sprintf("sym_ours_%s_ml", sc),   "Fig2", "sym",  sprintf("ours_%s_ml", sc), 1:12, c(1L, 200L))
-    # Figure 3 and Supplementary Tables 8, 11
+    # Figure 3 and Supplementary Tables S4, S28
     add(sprintf("rho_ours_%s_pen", sc),  "Fig3", "rho",  sprintf("ours_%s_pen", sc), 1:5, c(1L, 200L))
     add(sprintf("rho_ours_%s_ml", sc),   "Fig3", "rho",  sprintf("ours_%s_ml", sc), 1:5, c(1L, 200L))
     add(sprintf("rho_comp_%s_csm", sc),  "Fig3", "rho",  sprintf("comp_%s_csm", sc), 1:5, c(1L, 200L))
-    # Table 2 and Supplementary Tables 10, 12-14
+    # Table 2 and Supplementary Tables S3, S8-S10
     add(sprintf("main_comp_%s_csm", sc), "Tab2", "main", sprintf("comp_%s_csm", sc), 1:9, c(1L, 200L))
     for (st in c("quant", "exch", "ld", "split"))
       add(sprintf("%s_ours_%s_pen", st, sc), "Tab2", st, sprintf("ours_%s_pen", sc), D3, c(1L, 100L))
-    # Supplementary Table 3 (penalty constants) and Table 9 (magnitude components)
+    # Supplementary Table S5 (penalty constants) and Table S7 (magnitude components)
     for (pg in c("L0A10", "L10A10", "L100A10", "L30A0", "L30A3", "L30A30"))
       add(sprintf("main_ours_%s_pen_%s", sc, pg), "SuppTab3", "main", sprintf("ours_%s_pen_%s", sc, pg), D3, c(1L, 50L))
     for (s0 in c("A", "C"))
