@@ -108,10 +108,12 @@ pA <- ggplot(L[order(cat != "Neither")], aes(x, y, color = cat, shape = cat)) +
   geom_abline(intercept = 0, slope = 1, color = "#d9d8d3") +
   geom_hline(yintercept = cut_m, linetype = 2, color = COL[[2]]) + geom_vline(xintercept = cut_i, linetype = 2, color = COL[[3]]) +
   geom_point(size = 2.4) +
-  geom_text(data = L[gene %in% lab], aes(label = gene), color = "black", size = 2.6, hjust = -0.15, vjust = -0.3, show.legend = FALSE) +
+  geom_text(data = L[gene %in% lab], aes(label = gene, hjust = ifelse(x > 10, 1.15, -0.15)), color = "black", size = 2.6,
+            vjust = -0.3, show.legend = FALSE) +
   scale_color_manual(values = COL, labels = sprintf("%s (%d)", levels(L$cat), as.integer(table(L$cat))), name = NULL) +
   scale_shape_manual(values = SHP, labels = sprintf("%s (%d)", levels(L$cat), as.integer(table(L$cat))), name = NULL) +
-  scale_x_continuous(trans = sl, breaks = brk) + scale_y_continuous(trans = sl, breaks = brk) +
+  scale_x_continuous(trans = sl, breaks = brk, expand = expansion(mult = c(0.02, 0.06))) +
+  scale_y_continuous(trans = sl, breaks = brk, expand = expansion(mult = c(0.02, 0.06))) + coord_cartesian(clip = "off") +
   xlab(sprintf("-log10 lfdr, %s = I", SIGMA)) + ylab(sprintf("-log10 lfdr, estimated %s", SIGMA)) +
   theme_cowplot(11) + theme(legend.position = c(0.02, 0.98), legend.justification = c(0, 1))
 ggsave(here::here("Fig4", "fig_mediation_lfdr.pdf"), pA, width = 4.2, height = 4.0, device = PDF_DEVICE)
@@ -120,7 +122,7 @@ L[, panel := factor(sprintf("%s\n%s, chr%d", snp, locus_gene, chr), levels = spr
 top <- L[(rej_main_t1 & lfdr_main_t1 < 1e-2) | (rej_indep_t1 & !rej_main_t1 & lfdr_indep_t1 < 1e-3)][order(lfdr_main_t1)][, head(.SD, 3), by = panel]
 pB <- ggplot(L[order(cat != "Neither")], aes(tss_dist_kb / 1000, y, color = cat, shape = cat)) +
   geom_vline(xintercept = 0, color = "#d9d8d3") + geom_hline(yintercept = cut_m, linetype = 2, color = COL[[2]], linewidth = 0.4) +
-  geom_point(size = 1.8) + geom_text(data = top, aes(label = gene), color = "black", size = 2, hjust = -0.15, show.legend = FALSE) +
+  geom_point(size = 1.8) + geom_text(data = top, aes(label = gene, hjust = ifelse(tss_dist_kb > 500, 1.15, -0.15)), color = "black", size = 2, show.legend = FALSE) +
   facet_wrap(~panel, nrow = 3) + scale_color_manual(values = COL, name = NULL) + scale_shape_manual(values = SHP, name = NULL) +
   coord_cartesian(xlim = c(-1.05, 1.05), ylim = c(-0.5, CAPL + 1)) +
   xlab("TSS minus SNP (Mb)") + ylab("-log10 lfdr") + theme_cowplot(9) +

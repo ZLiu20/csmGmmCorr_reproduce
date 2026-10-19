@@ -69,7 +69,7 @@ pG <- ggplot(gw) + geom_abline(intercept = 0, slope = 1, color = "grey", linetyp
   scale_shape_manual(values = setNames(c(15, 16, 17), TT), name = "filled: robust; open: Pearson") +
   xlab("Empirical correlation of the statistics") + ylab(sprintf("Fitted %s (estimated)", SIGMA)) +
   ggtitle("Fitted and empirical correlations") + theme_paper(15) + theme(plot.title = element_text(size = 18, face = "plain")) +
-  theme(legend.position = c(0.02, 0.88), legend.justification = c(0, 1),
+  theme(legend.position = c(0.98, 0.02), legend.justification = c(1, 0),
         legend.title = element_text(size = 12), legend.text = element_text(size = 12), legend.key.size = unit(1.2, "line"))
 heat <- function(an, labs, title, blocks = FALSE) {
   cols <- RD_ANALYSES[[an]]$cols; n <- length(cols); M <- diag(n)
@@ -95,7 +95,8 @@ pD <- heat("glgc_replication", c("EUR F", "EUR M", "EAS F", "EAS M", "AFR F", "A
 pE <- heat("ukb_pleiotropy", c("BMI", "SBP", "TG", "HDL", "HbA1c"), sprintf("Pleiotropy: fitted %s (upper)\nvs robust correlation (lower)", SIGMA))
 # mediation: alpha coordinates first, then beta, so that the two blocks are visible
 RD_ANALYSES$mediation_scc$cols <- c("alpha_lung", "alpha_blood", "alpha_liver", "beta_lung", "beta_blood", "beta_liver")
-pF <- if (!has_med) no_med() else heat("mediation_scc", c("alpha Lung", "alpha Blood", "alpha Liver", "beta Lung", "beta Blood", "beta Liver"),
+GR <- if (isTRUE(capabilities("cairo"))) c("\u03b1", "\u03b2") else c("alpha", "beta")
+pF <- if (!has_med) no_med() else heat("mediation_scc", c(paste(GR[1], c("Lung", "Blood", "Liver")), paste(GR[2], c("Lung", "Blood", "Liver"))),
            sprintf("Mediation: fitted %s (upper)\nvs robust correlation (lower)", SIGMA), blocks = TRUE)
 # I: external support. Replication: summed held-out strata at lead variants (holdout_validation.R);
 # mediation: MVP S-PrediXcan statistics of the pairs (mediation_scc_report.R), t = 1.
