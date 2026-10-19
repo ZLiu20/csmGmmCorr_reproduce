@@ -51,7 +51,7 @@ run_dei_mediation_R1 <- function(z, t_value, q_value) {
     tuning = paste0(
       "pathways=", nrow(pair_mat),
       ";support_partial_conjunction_r=", as.integer(t_value) + 1L,
-      ";pathway_any=Bonferroni;combine=max;FDR=BH"
+      ";pathway_any=Bonferroni;combine=", med_combine_rule_R1(t_value), ";FDR=BH"
     )
   )
 }

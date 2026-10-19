@@ -19,7 +19,7 @@ run_mediation_safeguard_R1 <- function(z, t_value, q_value) {
     rankingScoreType = "parameter_free_mediation_safeguard_p",
     tuning = paste0(
       "support_partial_conjunction_r=", as.integer(t_value) + 1L,
-      ";pair=max_raw_coordinate_p;pathway_any=Bonferroni;combine=max;FDR=BH"
+      ";pair=max_raw_coordinate_p;pathway_any=Bonferroni;combine=", med_combine_rule_R1(t_value), ";FDR=BH"
     )
   )
 }

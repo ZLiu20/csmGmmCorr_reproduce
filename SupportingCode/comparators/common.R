@@ -106,11 +106,18 @@ combine_any_pathway_pvalues_R1 <- function(pair_pvalues) {
   pmin(1, ncol(pair_pvalues) * apply(pair_pvalues, 1L, min))
 }
 
+# Mediation null at threshold t: at most t nonzero links, or no complete pathway. Its p-value is
+# the larger of the coordinate partial-conjunction p-value and the pathway Bonferroni p-value.
+# At t = 1 a complete pathway already has two nonzero links, so the pathway p-value alone is
+# valid for the whole null and the partial-conjunction term is omitted (it can only enlarge the
+# p-value). options(csm.med_pc_screen_t1 = TRUE) restores the earlier max() at t = 1 (testing).
+med_combine_rule_R1 <- function(t_value)
+  if (as.integer(t_value) == 1L && !isTRUE(getOption("csm.med_pc_screen_t1", FALSE))) "pathway" else "max"
 combine_mediation_target_pvalues_R1 <- function(z, pair_pvalues, t_value) {
   p_coordinate <- coordinate_partial_conjunction_p_R1(z, t_value)
   p_pathway <- combine_any_pathway_pvalues_R1(pair_pvalues)
   list(
-    global = pmax(p_coordinate, p_pathway),
+    global = if (med_combine_rule_R1(t_value) == "pathway") p_pathway else pmax(p_coordinate, p_pathway),
     coordinate = p_coordinate,
     pathway = p_pathway
   )
