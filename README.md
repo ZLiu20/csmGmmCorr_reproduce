@@ -88,8 +88,8 @@ FAILED. `logs/versions.txt` records the R and package versions.
 | Table 1 | Tab1 | uses Fig2 | make_tab1.R |
 | Figure 3 | Fig3 | 9 arrays (2,400 tasks): correlation study, penalized and ML fits, csmGmm | plot_fig3.R |
 | Table 2 | Tab2 | 16 arrays (2,440 tasks): csmGmm comparison, quantitative outcomes, exchangeable correlation, linkage disequilibrium, independent test set, null-correlation oracle; uses Fig2 and Fig3 | make_tab2.R |
-| Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/` | make_tab3.R, plot_fig4.R, plot_fig5.R, holdout_validation.R |
-| Mediation application (Supplementary Section 8.7) | Fig4 | `run_mediation_ldl.lsf` (23 fits), `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`; requires `Data/` (LDL mediation) | summarize_mediation_ldl.R, diagnose_mediation_ldl.R |
+| Table 3, Figures 4-5 | Fig4 | `run_realdata.lsf` (13 fits); requires `Data/`; the mediation column of Table 3 and Figure 4 also needs the lung SCC fits below | make_tab3.R, holdout_validation.R, plot_fig4.R, plot_fig5.R |
+| Mediation application (main-text Section 6.3; Supplementary Section S5.7, Tables S20-S25, Figures S13-S14) | Fig4 | `run_mediation_scc.lsf` (11 fits), `run_mediation_scc_cap.lsf` (4 fits); requires the non-public data of `Data/README.md` | mediation_scc_compare.R, mediation_scc_mvp.R, mediation_scc_report.R |
 | Supplementary Figures 1-12 | SuppFig1 | uses Fig2 | plot_suppfig1_12.R |
 | Supplementary Table 1 | none | roadmap, text only | |
 | Supplementary Table 2 | SuppTab2 | none (exact counts) | make_supptab2.R |
@@ -102,7 +102,6 @@ FAILED. `logs/versions.txt` records the R and package versions.
 | Supplementary Tables 12-15 | SuppTab12 | 1 array (480 tasks): repfdr and directional PC; uses Fig2, Fig3, Tab2 | make_supptab12_15.R |
 | Supplementary Tables 16-18 | SuppTab16 | uses Fig2 | make_supptab16_18.R |
 | Supplementary Tables 19-23 | SuppTab19 | uses Fig4 | make_supptab19_23.R |
-| Supplementary Tables 24-26 | SuppTab24 | uses Fig4 LDL mediation (`run_mediation_ldl.lsf`, `run_mediation_ldl_all_t.lsf`, `run_mediation_ldl_compare.lsf`) | make_supptab24_26.R |
 | Package checks (Supplementary Section 2.7) | Validation | none | validate_csmgmm.R, validate2_csmgmm.R, diag_incon.R |
 
 Upper bounds on the wall time per task (`-W`):
@@ -124,6 +123,8 @@ The applications use public summary statistics:
 - the Global Lipids Genetics Consortium (GLGC, 2021) trans-ancestry lipid results;
 - the GLGC LDL-cholesterol results of ten ancestry-by-sex strata;
 - the round-2 UK Biobank GWAS of the Neale laboratory.
+
+The mediation application uses lung cancer data that are not public; see `Data/README.md`.
 
 Prepare them as follows (see `Data/README.md`):
 

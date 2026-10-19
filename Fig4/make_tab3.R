@@ -1,5 +1,6 @@
 # Table 3 and the numbers reported in main-text Section 6.
-#   Rscript Fig4/make_tab3.R      (after all 13 fits of Fig4/run_realdata.lsf)
+#   Rscript Fig4/make_tab3.R      (after all 13 fits of Fig4/run_realdata.lsf; the mediation rows
+#                                  need the lung SCC fits of Fig4/run_mediation_scc.lsf, see README)
 here::i_am("Fig4/make_tab3.R")
 suppressMessages(library(data.table))
 source(here::here("SupportingCode", "load_all.R"))
@@ -10,19 +11,28 @@ fwrite(X$fit_runs, here::here("Fig4", "output", "fit_runs_all.tsv"), sep = "\t")
 fwrite(X$iqr_sd, here::here("Fig4", "output", "iqr_sd_all.tsv"), sep = "\t")
 v <- function(an, va, t0, col) { x <- S[analysis == an & variant == va & t == t0][[col]]; if (length(x)) x[1] else NA }
 L <- c("\\begin{table}[!htbp]", "\\centering",
-  paste0("\\caption{Discoveries at $q=0.10$: variants and loci of the correlated csmGmm, loci after its monotone adjustment, ",
-         "and loci of the fits with $\\bSigma$ fixed at a robust correlation estimate and at $I$ (csmGmm). Loci: greedy clumping ",
-         "in $\\pm500$~kb windows.}\\label{tab:realdata}"),
+  "\\caption{Discoveries in the three applications.}\\label{tab:realdata}",
   "\\small", "\\begin{tabular}{lc rr r rr}", "\\toprule",
   " & & \\multicolumn{3}{c}{Correlated csmGmm} & Robust $\\bSigma$ & $\\bSigma=I$\\\\",
-  "\\cmidrule(lr){3-5}\\cmidrule(lr){6-6}\\cmidrule(lr){7-7}", "Analysis & $t$ & Variants & Loci & Adjusted loci & Loci & Loci\\\\", "\\midrule")
+  "\\cmidrule(lr){3-5}\\cmidrule(lr){6-6}\\cmidrule(lr){7-7}", "Analysis & $t$ & Discoveries & Loci & Adjusted loci & Loci & Loci\\\\", "\\midrule")
 for (an in c("glgc_replication", "ukb_pleiotropy")) for (t0 in 1:2) {
   lab <- if (t0 == 1) c(glgc_replication = "Replication, GLGC", ukb_pleiotropy = "Pleiotropy, UK Biobank")[[an]] else
     sprintf("\\quad %s tested", fcomma(v(an, "main", 1, "n_test")))
   L <- c(L, sprintf("%s & %d & %s & %s & %s & %s & %s\\\\", lab, t0, fcomma(v(an, "main", t0, "R_raw")), fcomma(v(an, "main", t0, "loci_raw")),
                     fcomma(v(an, "main", t0, "loci_adj")), fcomma(v(an, "robust", t0, "loci_raw")), fcomma(v(an, "indep", t0, "loci_raw"))))
 }
-write_tex(c(L, "\\bottomrule", "\\end{tabular}", "\\end{table}"), here::here("Fig4", "Tab3.tex"))
+# lung SCC mediation (cis pairs): discoveries are variant-gene pairs (not clumped into loci)
+MD <- here::here("Fig4", "output", "mediation_scc")
+ms <- function(va) { f <- file.path(MD, paste0("cis15_", va), "summary.tsv"); if (file.exists(f)) fread(f)[order(t)] else NULL }
+if (!is.null(ms("main")) && !is.null(ms("robust")) && !is.null(ms("indep"))) for (t0 in 1:2) {
+  lab <- if (t0 == 1) "Mediation, lung SCC" else sprintf("\\quad %d tested", ms("main")$n_pairs[1])
+  L <- c(L, sprintf("%s & %d & %d & -- & -- & %d & %d\\\\", lab, t0, ms("main")$R_raw[t0], ms("robust")$R_raw[t0], ms("indep")$R_raw[t0]))
+}
+note <- paste0("\\tablenote{Discoveries at $q=0.10$ by the correlated csmGmm, loci after its monotone adjustment, and loci for fits with ",
+               "$\\bSigma$ fixed at a robust correlation estimate and at $I$ (the penalized csmGmm with $\\bSigma=I$). For replication and ",
+               "pleiotropy, discoveries are variants and loci are obtained by greedy clumping in $\\pm500$~kb windows. For mediation, ",
+               "discoveries are variant--gene pairs, the last two columns count pairs, and the monotone adjustment changed no pair.}")
+write_tex(c(L, "\\bottomrule", "\\end{tabular}", note, "\\end{table}"), here::here("Fig4", "Tab3.tex"))
 
 # ---- numbers in the text ----
 rdisc <- function(an, va, t0) fread(here::here("Fig4", "output", paste0(an, "_", va), sprintf("discoveries_t%d.tsv.gz", t0)))

@@ -1,0 +1,17 @@
+#BSUB -J medscc_cap[1-4]
+#BSUB -W 4:00
+#BSUB -o Fig4/errDir/medscc_cap_%I.out
+#BSUB -e Fig4/errDir/medscc_cap_%I.err
+#BSUB -q medium
+#BSUB -n 4
+#BSUB -R "span[hosts=1] rusage[mem=16]"
+#BSUB -M 16
+
+# run 1-4: sensitivity of the lung SCC mediation fits (cis pairs, jobs 5 and 6 of
+# Fig4/mediation_scc_fit.R) to the cap on the statistics: 1-2 cap 8.1, 3-4 cap 6
+# (estimated Sigma, Sigma = I). Supplementary Table S23. Submit from the repository root.
+module load R/4.5.1
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+CAPS=(8.1 8.1 6 6); JOBS=(5 6 5 6)
+i=$((LSB_JOBINDEX - 1))
+CAP=${CAPS[$i]} Rscript Fig4/mediation_scc_fit.R ${JOBS[$i]}

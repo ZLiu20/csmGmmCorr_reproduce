@@ -1,0 +1,15 @@
+#BSUB -J medscc[1-11]
+#BSUB -W 6:00
+#BSUB -o Fig4/errDir/medscc_%I.out
+#BSUB -e Fig4/errDir/medscc_%I.err
+#BSUB -q medium
+#BSUB -n 4
+#BSUB -R "span[hosts=1] rusage[mem=32]"
+#BSUB -M 32
+
+# jobs 1-8 (then 9-11: cis15 robust Sigma, a_mu = 1.5 main and indep): (estimated Sigma, Sigma = I) x (all, top3, cis15, cis3); finished jobs are skipped
+# Submit from the repository root after Data/prepare_mediation_scc.R and Data/prepare_mediation_scc_cis.R
+# Only the cis jobs:  bsub -J "medscc[5-8]" < Fig4/run_mediation_scc.lsf
+module load R/4.5.1
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+Rscript Fig4/mediation_scc_fit.R $LSB_JOBINDEX

@@ -71,31 +71,34 @@ The replication files contain ten strata. The analysis uses EUR, EAS and AFR (fe
 male). The HIS and SAS strata are used only for the held-out validation
 (`Fig4/holdout_validation.R`).
 
-## Mediation application (three mediators, LDL cholesterol)
+## Mediation application (lung squamous cell carcinoma, three tissues)
+
+These data are **not public** and are not distributed with this repository. They were provided
+by R. Sun (see the Data Availability statement of the paper):
+
+- GTEx v8 eQTL statistics of the 15 lung cancer risk variants of McKay et al. (2017) for every gene,
+  in lung, whole blood and liver;
+- S-PrediXcan statistics for lung squamous cell carcinoma (SCC) in the International Lung Cancer
+  Consortium (ILCCO), with the GTEx v8 models of the three tissues;
+- the ILCCO overall lung cancer statistics of the 15 variants (used only to order them);
+- S-PrediXcan statistics for SCC in the Million Veteran Program (MVP), lung and whole blood
+  (`mvp_scc__PM__Lung.csv`, `mvp_scc__PM__Blood.csv`; external support only).
+
+With these files in `$ZILI_DIR` (see the top of `Data/prepare_mediation_scc.R`) and the MVP files in
+`Data/mediation/mvp/` (or `$MVP_DIR`):
 
 ```
-bash Data/download_mediation_ldl.sh            # about 4 GB, to Data/raw/mediation_ldl/
-Rscript tests/test_prepare_mediation_ldl.R     # seconds; synthetic check of the preparation
-bsub < Data/run_prepare_mediation_ldl.lsf      # set RAW_GLGC if the GLGC files are not in Data/raw/glgc
-bash Data/download_1000g.sh                    # 1000 Genomes phase 3 (EUR reference for conditional alpha)
-bsub < Data/run_prepare_mediation_ldl_cond.lsf # conditional alpha (sensitivity analysis)
-bsub < Fig4/run_mediation_ldl.lsf              # 23 fits
-bsub < Fig4/run_mediation_ldl_all_t.lsf        # t = 1, ..., 5 from the saved fits
-bsub < Fig4/run_mediation_ldl_compare.lsf      # csmGmm (Sigma = I), DEI, MediationTest, JS-PC
-Rscript Fig4/summarize_mediation_ldl.R
-Rscript SuppTab24/make_supptab24_26.R          # Supplementary Tables 24-26
+Rscript Data/prepare_mediation_scc.R        # all variant-gene pairs (Supplementary Section S5.7)
+Rscript Data/prepare_mediation_scc_cis.R    # cis pairs (TSS within 1 Mb), the analysis of the paper
+bsub < Fig4/run_mediation_scc.lsf           # 11 fits (cis15: jobs 5, 6 and 9-11)
+bsub < Fig4/run_mediation_scc_cap.lsf       # caps 8.1 and 6 (Supplementary Table S23)
+Rscript Fig4/mediation_scc_compare.R        # DEI, MediationTest, JS-PC; top 20 pairs (Table S24)
+Rscript Fig4/mediation_scc_mvp.R            # MVP support (Table S25)
+Rscript Fig4/mediation_scc_report.R         # Tables S22, S23, S25, Figures S13, S14, overlaps
 ```
 
-Inputs: liver cis-eQTL statistics of all tested variant-gene pairs (GTEx v8, eQTL Catalogue dataset
-QTD000266), the GENCODE v26 gene annotation of GTEx, the GTEx v8 variant lookup table, the GTEx v8 MASHR liver expression model (Barbeira et al. 2021) and the GLGC 2021
-EUR LDL results (female and male, from `download_data.sh`). The design is described at the top of
-`Data/prepare_mediation_ldl.R`:
-
-- one feature per common variant, one variant per 10-kb window (chosen from positions only);
-- M1, M2 and M3 are the liver expression of the three genes with the nearest transcription start
-  sites that have a liver model (K = 6); in the primary data set the models share no variant;
-- alpha = liver eQTL z of the variant for each gene; beta = S-PrediXcan z of each gene for LDL.
-
-Output: `Data/mediation/ldl_twas_liver.tsv.gz` and
-`Data/mediation/mediation_ldl_liver_{noshare,nearest}.tsv.gz`; with the conditional preparation,
-`Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz`.
+`Data/prepare_mediation_scc_cis.R` uses the gene annotation `Data/ensembl_refgene_hg19_20180109.rda`
+(GRCh37), the annotation used in the code of Sun, McCaw and Lin (2025). The cis restriction was
+chosen after the analysis of all pairs (Supplementary Section S5.7), so the analysis is exploratory.
+Without these data, `make_all.sh` skips the mediation scripts, and `Fig4/plot_fig4.R` and
+`Fig4/make_tab3.R` leave the mediation panels and rows empty.

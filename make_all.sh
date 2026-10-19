@@ -29,10 +29,15 @@ Fig4/make_tab3.R
 Fig4/plot_fig4.R
 Fig4/plot_fig5.R
 Fig4/holdout_validation.R
-SuppTab19/make_supptab19_23.R
-Fig4/summarize_mediation_ldl.R
-Fig4/diagnose_mediation_ldl.R
-SuppTab24/make_supptab24_26.R"
+SuppTab19/make_supptab19_23.R"
+# lung SCC mediation (the data are not public; see README): only when the prepared data exist.
+# plot_fig4.R runs last so that its mediation panels use the outputs of these scripts.
+[ -s Data/mediation/mediation_scc_cis.tsv.gz ] && SCRIPTS="$SCRIPTS
+Fig4/mediation_scc_compare.R
+Fig4/mediation_scc_mvp.R
+Fig4/mediation_scc_report.R"
+SCRIPTS="$(echo "$SCRIPTS" | grep -v '^Fig4/plot_fig4.R$')
+Fig4/plot_fig4.R"
 [ "${VALIDATION:-1}" = "1" ] && SCRIPTS="$SCRIPTS
 Validation/validate_csmgmm.R
 Validation/validate2_csmgmm.R

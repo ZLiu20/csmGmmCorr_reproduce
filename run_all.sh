@@ -8,11 +8,11 @@
 #   1. setup.R: packages, compiled kernels, logs/versions.txt
 #   2. submit every simulation array (Fig2, Fig3, Tab2, SuppTab3, SuppTab4, SuppTab9, SuppTab12);
 #      they need no data and start at once
-#   3. download the summary statistics (GLGC, UK Biobank, liver eQTL and expression models,
-#      1000 Genomes; about 45 GB), in parallel, while the simulations run
+#   3. download the summary statistics (GLGC, UK Biobank; about 25 GB) while the simulations run
 #   4. submit the data preparation and the application fits with LSF dependencies:
 #        prepare[1-3]  -> realdata[1-13]
-#        prep_medldl   -> prep_medldl_cond -> medldl[1-23] -> medldl_t[1-30], medldl_compare
+#        medscc[1-11], medscc_cap[1-4]   (lung SCC mediation; only if the non-public data have
+#                                         been prepared, see Data/README.md)
 #   5. submit one final job that waits for all of the above and runs make_all.sh
 # Dependencies use ended() rather than done(): a failed step does not leave the later jobs
 # pending for ever; they fail too, and logs/make/status.txt lists the scripts that failed. Steps whose
@@ -53,9 +53,9 @@ submit() {
 complete() { stamp "complete: $1"; }
 ndone() { ls $@ 2>/dev/null | wc -l; }
 SIM_LSF=$(ls Fig2/run_*.lsf Fig3/run_*.lsf Tab2/run_*.lsf SuppTab3/run_*.lsf SuppTab4/run_*.lsf SuppTab9/run_*.lsf SuppTab12/run_*.lsf)
-APP_JOBS="prepare realdata prep_medldl prep_medldl_cond medldl medldl_t medldl_compare"
+APP_JOBS="prepare realdata medscc medscc_cap"
 RD_DONE="Fig4/output/glgc_replication_*/DONE Fig4/output/ukb_pleiotropy_*/DONE Fig4/output/glgc_pleiotropy_*/DONE"
-MD_DONE="Fig4/output/mediation_ldl/*/DONE"
+MD_DONE="Fig4/output/mediation_scc/*/DONE"
 
 final_job() {
   # wait only for jobs that LSF still knows (finished jobs are forgotten after a while)
@@ -74,8 +74,8 @@ JOB
 case $mode in
 status)
   Rscript -e 'here::i_am("run_all.sh"); source(here::here("SupportingCode","load_all.R")); print(sim_progress(), row.names = FALSE)'
-  bjobs -w 2>/dev/null | awk 'NR == 1 || /final_make|prepare|realdata|medldl/'
-  echo "application fits done: $(ndone $RD_DONE) of 13 (realdata), $(ndone $MD_DONE) of 23 (medldl)"
+  bjobs -w 2>/dev/null | awk 'NR == 1 || /final_make|prepare|realdata|medscc/'
+  echo "application fits done: $(ndone $RD_DONE) of 13 (realdata), $(ndone $MD_DONE) of 15 (medscc)"
   ;;
 final)
   final_job
@@ -99,31 +99,22 @@ all)
 
   stamp "3. downloads"
   prepared=0
-  [ "$(ndone Data/prepared/{glgc_replication,glgc_pleiotropy,ukb_pleiotropy}/DONE)" -eq 3 ] && \
-    [ -s Data/mediation/mediation_ldl_liver_noshare.tsv.gz ] && [ -s Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz ] && prepared=1
+  [ "$(ndone Data/prepared/{glgc_replication,glgc_pleiotropy,ukb_pleiotropy}/DONE)" -eq 3 ] && prepared=1
   if [ $prepared = 1 ]; then complete "downloads (all data prepared)"
   elif [ "${DRYRUN:-0}" = "1" ]; then stamp "[dry run] would download the data"
   elif [ "${SKIP_DOWNLOAD:-0}" != "1" ]; then
-    mkdir -p Data/raw/g1000
-    bash Data/download_data.sh          > logs/download_data.log 2>&1 &   p1=$!
-    bash Data/download_mediation_ldl.sh > logs/download_medldl.log 2>&1 & p2=$!
-    bash Data/download_1000g.sh         > logs/download_1000g.log 2>&1 &  p3=$!
     ok=1
-    for p in $p1 $p2 $p3; do wait $p || ok=0; done
-    for l in logs/download_data.log logs/download_medldl.log logs/download_1000g.log; do
-      grep -q "DONE" $l || { ok=0; stamp "incomplete: $l"; tail -3 $l; }
-    done
+    bash Data/download_data.sh > logs/download_data.log 2>&1 || ok=0
+    grep -q "DONE" logs/download_data.log || { ok=0; stamp "incomplete: logs/download_data.log"; tail -3 logs/download_data.log; }
     [ $ok = 1 ] || { stamp "a download failed; rerun this script to resume"; exit 1; }
   fi
 
   stamp "4. data preparation and application fits"
   if [ "$(ndone Data/prepared/{glgc_replication,glgc_pleiotropy,ukb_pleiotropy}/DONE)" -eq 3 ]; then complete prepare; else submit Data/run_prepare.lsf; fi
   if [ "$(ndone $RD_DONE)" -ge 13 ]; then complete realdata; else submit Fig4/run_realdata.lsf prepare; fi
-  if [ -s Data/mediation/mediation_ldl_liver_noshare.tsv.gz ]; then complete prep_medldl; else submit Data/run_prepare_mediation_ldl.lsf; fi
-  if [ -s Data/mediation/mediation_ldl_liver_noshare_cond.tsv.gz ]; then complete prep_medldl_cond; else submit Data/run_prepare_mediation_ldl_cond.lsf prep_medldl; fi
-  if [ "$(ndone $MD_DONE)" -ge 23 ]; then complete medldl; else submit Fig4/run_mediation_ldl.lsf prep_medldl_cond; fi
-  if [ "$(ndone Fig4/output/mediation_ldl/*/all_t.tsv)" -ge 23 ]; then complete medldl_t; else submit Fig4/run_mediation_ldl_all_t.lsf medldl; fi
-  if [ -s Fig4/output/mediation_ldl/compare/top_loci_t2.tsv ]; then complete medldl_compare; else submit Fig4/run_mediation_ldl_compare.lsf medldl; fi
+  if [ ! -s Data/mediation/mediation_scc_cis.tsv.gz ]; then stamp "lung SCC mediation data not prepared (not public, see Data/README.md): skipped"
+  elif [ "$(ndone $MD_DONE)" -ge 15 ]; then complete medscc; complete medscc_cap
+  else submit Fig4/run_mediation_scc.lsf; submit Fig4/run_mediation_scc_cap.lsf medscc; fi
 
   stamp "5. final job: figures and tables"
   is_queued final_make && stamp "queued already: final_make" || final_job
