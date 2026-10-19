@@ -1,5 +1,5 @@
 # Supplementary Tables S26-S28 (folder numbering 6-8): design-level results of the main simulation (Table 6), with
-# sign-symmetric statistics (Table 7) and of the correlation study (Table 8).
+# zero-intercept logistic designs (Table 7) and of the correlation study (Table 8).
 # Uses the output of Fig2 and Fig3:  Rscript SuppTab6/make_supptab6_8.R
 here::i_am("SuppTab6/make_supptab6_8.R")
 suppressMessages(library(data.table))
@@ -28,7 +28,7 @@ dtab(D, sprintf(paste0("Design-level results of the main simulation (500 replica
      "tab:sim-design", c("penalized", "penalized_adjusted", "ML", "QCH", "adaFilter", "DEI", "MediationTest", "PCPathSafeguard"),
      here::here("SuppTab6", "SuppTab6.tex"))
 S <- design_means(read_sim("Fig2", "sym"))
-dtab(S, paste0("Design-level results with symmetric statistics (logistic intercept 0; all twelve designs of each of the ",
+dtab(S, paste0("Design-level results of the zero-intercept logistic designs (logistic intercept 0; all twelve designs of each of the ",
                "three targets; 200 replicates per design)."), "tab:sim-sym", c("penalized", "ML"), here::here("SuppTab6", "SuppTab7.tex"))
 R <- design_means(read_sim("Fig3", "rho"), by = c("target", "K", "t", "method", "design", "x"))
 R[, axis := "rho"]

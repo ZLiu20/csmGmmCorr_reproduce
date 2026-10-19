@@ -5,7 +5,7 @@ hue <- function(h) grDevices::hcl(h = h, c = 100, l = 65)
 METHOD_STYLE <- data.frame(
   method   = c("penalized", "ML", "QCH", "adaFilter", "DEI", "MediationTest", "PCPathSafeguard", "sym"),
   label    = c("Correlated csmGmm", "Correlated csmGmm (ML)", "QCH", "adaFilter", "DEI", "MediationTest",
-               "JS-PC", "Correlated csmGmm, symmetric statistics"),
+               "JS-PC", "Correlated csmGmm, zero intercept"),
   color    = hue(c(15, 195, 105, 285, 60, 240, 330, 150)),
   linetype = c("solid", "22", "13", "1343", "44", "121412", "6222", "solid"),
   stringsAsFactors = FALSE)
@@ -28,7 +28,7 @@ fdp_line <- function() ggplot2::geom_hline(yintercept = 0.1, linetype = 2, color
 # multiple of 0.05 above the data, so that differences near the level remain visible.
 fdp_top <- function(x) max(0.2, ceiling(max(x, na.rm = TRUE) * 1.05 * 20) / 20)
 
-# One panel: y against the design value x for each method (penalized fit with sign-symmetric
+# One panel: y against the design value x for each method (penalized fit with zero-intercept
 # statistics added as a green line with points when sym is given).
 sim_panel <- function(z, y, methods, xlab, ylab, ylim, hline = FALSE, sym = NULL) {
   z <- as.data.frame(z); z <- z[z$method %in% methods, ]

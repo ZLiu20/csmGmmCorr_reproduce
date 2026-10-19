@@ -10,5 +10,5 @@ cap <- function(t0, powref) paste0("Mean FDP at $q=0.10$ and $t=", t0, "$ under 
   "processes, averaged over the first and fifth effect-size designs and one signal-proportion design of each target ",
   "($\\tau_1=0.02$ for pleiotropy and replication, $0.04$ for mediation); the last block uses the fifth effect-size design ",
   "with $\\rho=0.8$. Replicates: 500 (first row), 200 (estimation rows and $\\rho=0.8$; 50 for the fixed null correlation), ",
-  "100 (independent test set and other data-generating rows; 200 for symmetric statistics). Power is in ", powref, ".")
+  "100 (independent test set and other data-generating rows; 200 for the zero-intercept designs). Power is in ", powref, ".")
 write_tex(sources_tex(T, 1, "tab:sources", cap(1, "Supplementary Table~\\ref{supp-tab:sources-power}")), here::here("Tab2", "Tab2.tex"))

@@ -67,7 +67,7 @@ SOURCE_ROWS <- list(
   c("csm_pen", "csmGmm ($\\bSigma=I$), penalized"),
   c("split", "Correlated csmGmm, independent test set"),
   c(NA, "\\textit{Data-generating process}"),
-  c("sym", "Symmetric statistics (intercept 0)"),
+  c("sym", "Zero logistic intercept"),
   c("quant", "Quantitative outcomes"),
   c("exch", "Exchangeable correlation 0.4"),
   c("ld", "Linkage disequilibrium (variant level)"),

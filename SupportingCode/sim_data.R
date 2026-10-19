@@ -61,7 +61,7 @@ design_table <- function(study = "main", scen = "pl") {
   main <- rbind(main, ext[names(main)])
   main$outcome <- "logit"; main$ld <- 0; main$corr <- "ar1"
   if (study %in% c("main", "split")) return(main)
-  if (study == "sym") { main$b0 <- 0; return(main) }   # intercept 0: symmetric statistics (all scenarios)
+  if (study == "sym") { main$b0 <- 0; return(main) }   # intercept 0 (zero-intercept logistic designs; all scenarios)
   # Robustness studies (same designs and seeds layout, different data-generating process):
   #   quant: quantitative outcome(s), linear model with unit-variance errors and the effects
   #          scaled by sqrt(0.197) = 0.444, which gives the noncentrality of the logistic

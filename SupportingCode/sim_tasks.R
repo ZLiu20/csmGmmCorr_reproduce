@@ -8,7 +8,7 @@
 #
 # Studies (data-generating processes, SupportingCode/sim_data.R):
 #   main  latent AR(1) correlation 0.2, logistic intercept -1, 12 designs per target
-#   sym   as main with intercept 0 (sign-symmetric statistics)
+#   sym   as main with intercept 0 (zero-intercept logistic designs)
 #   rho   fifth effect-size design with rho = 0, 0.2, ..., 0.8
 #   quant quantitative outcomes;  exch exchangeable correlation 0.4;
 #   ld    genotypes in linkage disequilibrium;  split  independent test data set

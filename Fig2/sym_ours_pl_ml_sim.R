@@ -1,4 +1,4 @@
-# Fig2: sign-symmetric statistics (logistic intercept 0); pleiotropy;
+# Fig2: zero-intercept logistic designs (logistic intercept 0); pleiotropy;
 # correlated csmGmm, maximum likelihood.
 # Designs 1-12, K = 4 and 6, replicates 1-200; one task = 10 replicates of one
 # (design, K, t) cell, 480 tasks. Output: Fig2/output/sym/ours_pl_ml/

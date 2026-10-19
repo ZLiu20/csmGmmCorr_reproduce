@@ -16,7 +16,7 @@ cap12 <- paste0("Mean FDP at $q=0.10$ and $t=2$ under alternative estimators and
   "over the first and fifth effect-size designs and one signal-proportion design of each target ($\\tau_1=0.02$ for ",
   "pleiotropy and replication, $0.04$ for mediation); the last block uses the fifth effect-size design with $\\rho=0.8$. ",
   "Replicates: 500 (first row), 200 (estimation rows and $\\rho=0.8$; 50 for the fixed null correlation), 100 (independent ",
-  "test set and other data-generating rows; 200 for symmetric statistics). Power is in Table~\\ref{tab:sources-power}.")
+  "test set and other data-generating rows; 200 for the zero-intercept designs). Power is in Table~\\ref{tab:sources-power}.")
 write_tex(sources_tex(T, 2, "tab:sources-t2", cap12), here::here("SuppTab12", "SuppTab12.tex"))
 
 # ---- Table 13 ----
