@@ -8,6 +8,7 @@ The three scripts in this folder compare csmGmmCorr with the csmGmm package of S
 | `validate_csmgmm.R` | csmGmm's EM started at our estimate (K = 4, Sigma = I; K = 2, fixed correlation); both fitted from the same start | `validate_csmgmm_log.txt` |
 | `validate2_csmgmm.R` | A. one EM step from the same parameters; B. full fits from the same start on well-identified data (log-likelihood, lfdr, rejections); C. log-likelihood of both solutions on the sparse simulation data of `validate_csmgmm.R` | `validate2_log.txt` |
 | `diag_incon.R` | our incongruity count against `csmGmm::check_incongruous`, and the diagnostics of Supplementary Section S4.6.3 | `diag_incon_log.txt` |
+| `sim_convergence.R` | convergence of every csmGmm fit in the simulation studies (no replicate without a converged start) | `sim_convergence_by_design.csv` |
 
 The numbers of Supplementary Sections 6.4 (comparison with csmGmm) and 7.3 come from
 `validate2_log.txt` (parts A and B) and `diag_incon_log.txt`.
